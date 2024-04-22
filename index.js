@@ -43,12 +43,12 @@ async function getCurrentSemester(userId) {
 // Endpoint untuk login
 app.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
     
-    const userQuerySnapshot = await db.collection('users').where('email', '==', email).limit(1).get();
+    const userQuerySnapshot = await db.collection('users').where('username', '==', username).limit(1).get();
     if (userQuerySnapshot.empty) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid username or password' });
     }
 
     // Ambil data user
@@ -61,7 +61,7 @@ app.post('/login', async (req, res) => {
     }
 
 
-    const token = jwt.sign({ email: userData.email, userId: userData.id }, secretKey, { expiresIn: '24h' });
+    const token = jwt.sign({ username: userData.username, userId: userData.id }, secretKey, { expiresIn: '24h' });
 
     // Login berhasil, kirim JWT sebagai respons
     res.json({ message: 'Login successful', token });
@@ -79,8 +79,8 @@ app.post('/create', async (req, res) => {
       const userJson = {
         email: req.body.email,
         password: encrypted_password,
-        firstName: req.body.firstName,
-        lastName: req.body.lastName
+        fullname: req.body.fullname,
+        username: req.body.username
       };
       const usersDb = db.collection('users'); 
       const response = await usersDb.doc(id).set(userJson);

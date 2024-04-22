@@ -3,12 +3,15 @@ const fs = require('firebase-admin');
 const serviceAccount = require('./config/key.json');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const http = require('http')
+
 fs.initializeApp({
  credential: fs.credential.cert(serviceAccount)
 });
 
 
 const app = express();
+const server = http.createServer(app)
 app.use(express.json());
 const db = fs.firestore();
 
@@ -93,43 +96,44 @@ async function isUsernameRegistered(username) {
 
 app.post('/create', async (req, res) => {
   try {
-
     // Validasi email
     if (!isValidEmail(req.body.email)) {
-      return res.status(400).send("Invalid email format");
-  }
+      return res.status(400).json({ statusCode: "400", message: "Invalid email format" });
+    }
 
-  // Validasi apakah email sudah terdaftar
-  if (await isEmailRegistered(req.body.email)) {
-      return res.status(400).send("Email is already registered");
-  }
+    // Validasi apakah email sudah terdaftar
+    if (await isEmailRegistered(req.body.email)) {
+      return res.status(400).json({statusCode: "400", message: "Email is already registered" });
+    }
 
-  // Validasi apakah username sudah terdaftar
-  if (await isUsernameRegistered(req.body.username)) {
-      return res.status(400).send("Username is already taken");
-  }
-      // Check if password and password confirmation match
-      if (req.body.password !== req.body.password_confirmation) {
-          return res.status(400).send("Password and password confirmation do not match");
-      }
+    // Validasi apakah username sudah terdaftar
+    if (await isUsernameRegistered(req.body.username)) {
+      return res.status(400).json({statusCode: "400", message: "Username is already taken" });
+    }
 
-      // Encrypt the password
-      const encrypted_password = await bcrypt.hash(req.body.password, 10);
-      console.log(req.body);
-      const id = req.body.email;
-      const userJson = {
-          email: req.body.email,
-          password: encrypted_password,
-          fullname: req.body.fullname,
-          username: req.body.username
-      };
-      const usersDb = db.collection('users'); 
-      const response = await usersDb.doc(id).set(userJson);
-      res.send(response);
+    // Check if password and password confirmation match
+    if (req.body.password !== req.body.password_confirmation) {
+      return res.status(400).json({ statusCode: "400", message: "Password and password confirmation do not match" });
+    }
+
+    // Encrypt the password
+    const encrypted_password = await bcrypt.hash(req.body.password, 10);
+    console.log(req.body);
+    const id = req.body.email;
+    const userJson = {
+      email: req.body.email,
+      password: encrypted_password,
+      fullname: req.body.fullname,
+      username: req.body.username
+    };
+    const usersDb = db.collection('users'); 
+    const response = await usersDb.doc(id).set(userJson);
+    res.status(200).json({statusCode: "200", message: "Registered Successfully" });
   } catch(error) {
-      res.status(500).send(error);
+    res.status(500).json({ statusCode: "500",message: error.message });
   }
 });
+
 
 
   app.get('/read/:id', async (req, res) => {
@@ -337,6 +341,8 @@ app.post('/users/:userId/rencanaMandiri', async (req, res) => {
 
   const port = process.env.PORT || 8080;
 
-  app.listen(port, () => {
-    console.log(`Server berjalan di http://localhost:${port}`);
-  });
+  server.listen(8000,'127.0.0.1',function(){
+    server.close(function(){
+      server.listen(8001,'192.168.0.108')
+    })
+   })

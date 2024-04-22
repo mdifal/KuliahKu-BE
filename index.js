@@ -71,8 +71,43 @@ app.post('/login', async (req, res) => {
   }
 });
 
+function isValidEmail(email) {
+  // Regular expression untuk memeriksa format email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+// Fungsi untuk memeriksa apakah email sudah terdaftar
+async function isEmailRegistered(email) {
+  // Lakukan pengecekan di database atau sumber data lainnya
+  const user = await db.collection('users').where('email', '==', email).get();
+  return !user.empty; // Return true jika email sudah terdaftar, false jika tidak
+}
+
+// Fungsi untuk memeriksa apakah username sudah terdaftar
+async function isUsernameRegistered(username) {
+  // Lakukan pengecekan di database atau sumber data lainnya
+  const user = await db.collection('users').where('username', '==', username).get();
+  return !user.empty; // Return true jika username sudah terdaftar, false jika tidak
+}
+
 app.post('/create', async (req, res) => {
   try {
+
+    // Validasi email
+    if (!isValidEmail(req.body.email)) {
+      return res.status(400).send("Invalid email format");
+  }
+
+  // Validasi apakah email sudah terdaftar
+  if (await isEmailRegistered(req.body.email)) {
+      return res.status(400).send("Email is already registered");
+  }
+
+  // Validasi apakah username sudah terdaftar
+  if (await isUsernameRegistered(req.body.username)) {
+      return res.status(400).send("Username is already taken");
+  }
       // Check if password and password confirmation match
       if (req.body.password !== req.body.password_confirmation) {
           return res.status(400).send("Password and password confirmation do not match");

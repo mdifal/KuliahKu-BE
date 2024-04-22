@@ -72,23 +72,30 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/create', async (req, res) => {
-    try {
-      encrypted_password= await bcrypt.hash(req.body.password, 10);
+  try {
+      // Check if password and password confirmation match
+      if (req.body.password !== req.body.password_confirmation) {
+          return res.status(400).send("Password and password confirmation do not match");
+      }
+
+      // Encrypt the password
+      const encrypted_password = await bcrypt.hash(req.body.password, 10);
       console.log(req.body);
       const id = req.body.email;
       const userJson = {
-        email: req.body.email,
-        password: encrypted_password,
-        fullname: req.body.fullname,
-        username: req.body.username
+          email: req.body.email,
+          password: encrypted_password,
+          fullname: req.body.fullname,
+          username: req.body.username
       };
       const usersDb = db.collection('users'); 
       const response = await usersDb.doc(id).set(userJson);
       res.send(response);
-    } catch(error) {
-      res.send(error);
-    }
-  });
+  } catch(error) {
+      res.status(500).send(error);
+  }
+});
+
 
   app.get('/read/:id', async (req, res) => {
     try {

@@ -18,6 +18,8 @@ const db = fs.firestore();
 const secretKey = 'secret'; // Ganti dengan kunci rahasia yang lebih kuat dalam produksi
 
 
+
+
 async function getCurrentSemester(userId) {
   // Mendapatkan tanggal hari ini
   const today = new Date();
@@ -42,6 +44,19 @@ async function getCurrentSemester(userId) {
 
   return currentSemesterId;
 }
+
+
+app.get('/health', (req, res) => {
+  try {
+    // Implementasi logika health check di sini
+    // Misalnya, Anda dapat memeriksa koneksi ke database atau sumber daya lainnya
+    // Jika semuanya berfungsi dengan baik, kirim respons dengan status OK
+    res.status(200).json({ status: 'OK' });
+  } catch(error) {
+    // Jika ada kesalahan dalam logika health check, kirim respons dengan status error
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Endpoint untuk login
 app.post('/login', async (req, res) => {

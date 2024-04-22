@@ -4,6 +4,7 @@ const serviceAccount = require('./config/key.json');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const http = require('http')
+const cors = require('cors');
 
 fs.initializeApp({
  credential: fs.credential.cert(serviceAccount)
@@ -11,6 +12,7 @@ fs.initializeApp({
 
 
 const app = express();
+app.use(cors());
 const server = http.createServer(app)
 app.use(express.json());
 const db = fs.firestore();
@@ -355,9 +357,12 @@ app.post('/users/:userId/rencanaMandiri', async (req, res) => {
 
 
   const port = process.env.PORT || 8080;
-
+  const host = '192.168.9.217'
   server.listen(8000,'127.0.0.1',function(){
     server.close(function(){
-      server.listen(8001,'192.168.0.108')
+      server.listen(8001, host)
+      console.log(`Ini keterangan server dah jalan, agar kita khususnya fauza tidak ngahuleng`);
     })
    })
+
+

@@ -190,13 +190,14 @@ app.post('/create', async (req, res) => {
 app.post('/users/:userId/time-records', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { startTime, endTime, subject } = req.body;
+    const { startTime, endTime, subject, jenis } = req.body;
 
     // Membuat time record baru untuk user dengan userId tertentu
     const timeRecordRef = await db.collection('users').doc(userId).collection('time_records').add({
       startTime,
       endTime,
-      subject
+      subject,
+      type
     });
 
     res.status(201).json({ message: 'Time record added successfully', id: timeRecordRef.id });
@@ -304,14 +305,14 @@ app.get('/users/:userId/jadwalKuliah/names', async (req, res) => {
 app.post('/users/:userId/semesters', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { semesterNumber, startDate, endDate, totalCredits } = req.body;
+    const { semesterNumber, startDate, endDate, sks } = req.body;
 
     // Membuat semester baru untuk user dengan userId tertentu
     const semesterRef = await db.collection('users').doc(userId).collection('semesters').add({
       semesterNumber,
       startDate,
       endDate,
-      totalCredits
+      sks
     });
 
     res.status(201).json({ message: 'Semester added successfully', id: semesterRef.id });
@@ -353,11 +354,28 @@ app.post('/users/:userId/rencanaMandiri', async (req, res) => {
   }
 });
 
+app.get('/users/:userId/rencanaMandiri', async (req, res) => {
+  try {
+    const { userId } = req.params;
 
+    // Mengambil daftar jadwal mandiri untuk user dengan userId tertentu
+    const rencanaMandiriSnapshot = await db.collection('users').doc(userId).collection('rencanaMandiri').get();
+
+    const rencanaMandiriList = [];
+    rencanaMandiriSnapshot.forEach(doc => {
+      rencanaMandiriList.push({ id: doc.id, ...doc.data() });
+    });
+
+    res.status(200).json(rencanaMandiriList);
+  } catch (error) {
+    console.error('Error fetching rencana mandiri:', error);
+    res.status(500).json({ error: 'Failed to fetch rencana mandiri' });
+  }
+});
 
 
   const port = process.env.PORT || 8080;
-  const host = '192.168.9.217'
+  const host = '192.168.224.66'
   server.listen(8000,'127.0.0.1',function(){
     server.close(function(){
       server.listen(8001, host)

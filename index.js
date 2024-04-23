@@ -282,6 +282,36 @@ app.get('/users/:userId/jadwalKuliah', async (req, res) => {
   }
 });
 
+app.get('/users/:userId/jadwalKuliahSemester', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { semesterId } = req.query; // Mendapatkan semesterId dari query parameter
+
+    // Mengambil semua jadwal mata kuliah untuk user dengan userId tertentu pada semester tertentu
+    let schedulesCollection = db.collection('users').doc(userId).collection('schedules');
+
+    // Jika ada filter semesterId
+    if (semesterId) {
+      schedulesCollection = schedulesCollection.where('semesterId', '==', semesterId);
+    }
+
+    const schedulesSnapshot = await schedulesCollection.get();
+    const schedules = [];
+    schedulesSnapshot.forEach(doc => {
+      const scheduleData = { id: doc.id, ...doc.data() };
+      // Konversi timestamp ke format yang lebih mudah dibaca jika perlu
+
+      schedules.push(scheduleData);
+    });
+
+    res.json(schedules);
+  } catch (error) {
+    console.error('Error fetching schedules:', error);
+    res.status(500).json({ error: 'Failed to fetch schedules' });
+  }
+});
+
+
 app.get('/users/:userId/jadwalKuliah/names', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -375,7 +405,7 @@ app.get('/users/:userId/rencanaMandiri', async (req, res) => {
 
 
   const port = process.env.PORT || 8080;
-  const host = '192.168.224.66'
+  const host = '10.51.180.11'
   server.listen(8000,'127.0.0.1',function(){
     server.close(function(){
       server.listen(8001, host)

@@ -81,9 +81,10 @@ app.post('/login', async (req, res) => {
     }
 
 
-    const token = jwt.sign({ username: userData.username, userId: userData.id }, secretKey, { expiresIn: '24h' });
-
+    const token = jwt.sign({ username: userData.username, userId: userData.email }, secretKey, { expiresIn: '24h' });
+    console.log(userData.email);
     // Login berhasil, kirim JWT sebagai respons
+    console.log(token);
     res.json({ message: 'Login successful', token });
   } catch (error) {
     console.error('Error during login:', error);
@@ -405,7 +406,7 @@ app.get('/users/:userId/rencanaMandiri', async (req, res) => {
 
 
   const port = process.env.PORT || 8080;
-  const host = '10.51.180.11'
+  const host = '192.168.68.202'
   server.listen(8000,'127.0.0.1',function(){
     server.close(function(){
       server.listen(8001, host)

@@ -81,7 +81,7 @@ app.post('/login', async (req, res) => {
     }
 
 
-    const token = jwt.sign({ username: userData.username, userId: userData.email }, secretKey, { expiresIn: '24h' });
+    const token = jwt.sign({ email: userData.email }, secretKey, { expiresIn: '24h' });
     console.log(userData.email);
     // Login berhasil, kirim JWT sebagai respons
     console.log(token);

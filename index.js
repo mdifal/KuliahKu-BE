@@ -421,7 +421,7 @@ app.post('/users/:userId/rencanaMandiri', async (req, res) => {
       notes
     });
 
-    res.status(201).json({ message: 'Rencana mandiri added successfully', id: rencanaMandiriRef.id });
+    res.status(200).json({ message: 'Rencana mandiri added successfully', id: rencanaMandiriRef.id });
   } catch (error) {
     console.error('Error adding rencana mandiri:', error);
     res.status(500).json({ error: 'Failed to add rencana mandiri' });
@@ -475,7 +475,7 @@ app.get('/users/:userId/rencanaMandiri', async (req, res) => {
     // Menunggu semua promise selesai
     await Promise.all(promises);
 
-    res.status(200).json(rencanaMandiriList);
+    res.status(200).json({statusCode : '200', data:rencanaMandiriList});
   } catch (error) {
     console.error('Error fetching rencana mandiri:', error);
     res.status(500).json({ error: 'Failed to fetch rencana mandiri' });
@@ -508,7 +508,7 @@ app.get('/users/:userId/rencanaMandiri/:rencanaMandiriId', async (req, res) => {
       color
     };
 
-    res.status(200).json(responseData);
+    res.status(200).json({statusCode : '200', data : responseData});
   } catch (error) {
     console.error('Error fetching rencana mandiri:', error);
     res.status(500).json({ error: 'Failed to fetch rencana mandiri' });

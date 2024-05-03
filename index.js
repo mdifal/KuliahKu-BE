@@ -5,7 +5,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const http = require('http')
 const cors = require('cors');
-
+const firebase = require("firebase/app");
 fs.initializeApp({
  credential: fs.credential.cert(serviceAccount)
 });
@@ -242,8 +242,6 @@ app.post('/users/:userId/jadwalKuliah', async (req, res) => {
     }
 
     // Mengonversi waktu menjadi timestamp
-    const startTimestamp = new Date(startTime).getTime();
-    const endTimestamp = new Date(endTime).getTime();
 
     // Membuat jadwal mata kuliah baru untuk user dengan userId tertentu
     const scheduleRef = await db.collection('users').doc(userId).collection('schedules').add({
@@ -252,8 +250,8 @@ app.post('/users/:userId/jadwalKuliah', async (req, res) => {
       dosen,
       ruang,
       day,
-      startTime: new Date(startTimestamp),
-      endTime: new Date(endTimestamp),
+      startTime,
+      endTime,
       color 
     });
 

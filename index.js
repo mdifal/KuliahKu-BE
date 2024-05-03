@@ -257,7 +257,7 @@ app.post('/users/:userId/jadwalKuliah', async (req, res) => {
       color 
     });
 
-    res.status(201).json({ message: 'Schedule added successfully', id: scheduleRef.id });
+    res.status(200).json({ statusCode:"200", message: 'Schedule added successfully', id: scheduleRef.id });
   } catch (error) {
     console.error('Error adding schedule:', error);
     res.status(500).json({ error: 'Failed to add schedule' });
@@ -406,7 +406,7 @@ app.get('/users/:userId/rencanaMandiri', async (req, res) => {
 
 
   const port = process.env.PORT || 8080;
-  const host = '192.168.68.202'
+  const host = '127.0.0.1'
   server.listen(8000,'127.0.0.1',function(){
     server.close(function(){
       server.listen(8001, host)

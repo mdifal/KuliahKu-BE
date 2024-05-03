@@ -397,7 +397,7 @@ app.post('/users/:userId/semesters', async (req, res) => {
 app.post('/users/:userId/rencanaMandiri', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { type, subjectId, dateReminder, timeReminder, dateDeadline, timeDeadline, notes } = req.body;
+    const { type, subjectId, title, dateReminder, timeReminder, dateDeadline, timeDeadline, notes } = req.body;
 
     // Mendapatkan ID semester berlangsung
     const currentSemesterId = await getCurrentSemester(userId);
@@ -413,6 +413,7 @@ app.post('/users/:userId/rencanaMandiri', async (req, res) => {
     // Membuat rencana mandiri baru untuk user dengan userId tertentu
     const rencanaMandiriRef = await db.collection('users').doc(userId).collection('rencanaMandiri').add({
       semesterId: currentSemesterId,
+      title,
       type,
       subjectId,
       dateTimeReminder: new Date(dateTimeReminder),
@@ -427,10 +428,26 @@ app.post('/users/:userId/rencanaMandiri', async (req, res) => {
   }
 });
 
+// Fungsi untuk mendapatkan warna dari subject
+async function getColor(userId, subjectId) {
+  try {
+    // Mendapatkan data mata kuliah berdasarkan subjectId
+    const subjectDoc = await db.collection('users').doc(userId).collection('schedules').doc(subjectId).get();
+    if (!subjectDoc.exists) {
+      return null; // Mengembalikan null jika mata kuliah tidak ditemukan
+    }
+    // Mengambil warna dari mata kuliah
+    return subjectDoc.data().color;
+  } catch (error) {
+    console.error('Error fetching color:', error);
+    return null;
+  }
+}
+
 app.get('/users/:userId/rencanaMandiri', async (req, res) => {
   try {
     const { userId } = req.params;
-
+    
     // Mendapatkan ID semester berlangsung
     const currentSemesterId = await getCurrentSemester(userId);
 
@@ -441,13 +458,57 @@ app.get('/users/:userId/rencanaMandiri', async (req, res) => {
     // Mengambil daftar jadwal mandiri untuk user dengan userId tertentu dan semester yang sedang berlangsung
     const rencanaMandiriSnapshot = await db.collection('users').doc(userId).collection('rencanaMandiri')
                                           .where('semesterId', '==', currentSemesterId).get();
-
+                                   
+                                      
     const rencanaMandiriList = [];
-    rencanaMandiriSnapshot.forEach(doc => {
-      rencanaMandiriList.push({ id: doc.id, ...doc.data() });
+
+    // Membuat array dari promise yang akan menunggu semua operasi asinkron selesai
+    const promises = rencanaMandiriSnapshot.docs.map(async doc => {
+      const data = doc.data();
+     
+      // Mendapatkan warna dari mata kuliah
+      const color = await getColor(userId, data.subjectId);
+ 
+      rencanaMandiriList.push({ id: doc.id, title: data.title, dateTimeDeadline: data.dateTimeDeadline, color });
     });
 
+    // Menunggu semua promise selesai
+    await Promise.all(promises);
+
     res.status(200).json(rencanaMandiriList);
+  } catch (error) {
+    console.error('Error fetching rencana mandiri:', error);
+    res.status(500).json({ error: 'Failed to fetch rencana mandiri' });
+  }
+});
+
+
+app.get('/users/:userId/rencanaMandiri/:rencanaMandiriId', async (req, res) => {
+  try {
+    const { userId, rencanaMandiriId } = req.params;
+    
+    // Mendapatkan data rencana mandiri berdasarkan userId dan rencanaMandiriId
+    const rencanaMandiriDoc = await db.collection('users').doc(userId).collection('rencanaMandiri').doc(rencanaMandiriId).get();
+    
+    // Memeriksa apakah rencana mandiri ditemukan
+    if (!rencanaMandiriDoc.exists) {
+      return res.status(404).json({ error: 'Rencana mandiri not found' });
+    }
+
+    // Mendapatkan data rencana mandiri
+    const data = rencanaMandiriDoc.data();
+    
+    // Mendapatkan warna dari mata kuliah
+    const color = await getColor(userId, data.subjectId);
+ 
+    // Menyusun respons dengan seluruh data rencana mandiri dan warna
+    const responseData = {
+      id: rencanaMandiriDoc.id,
+      ...data,
+      color
+    };
+
+    res.status(200).json(responseData);
   } catch (error) {
     console.error('Error fetching rencana mandiri:', error);
     res.status(500).json({ error: 'Failed to fetch rencana mandiri' });

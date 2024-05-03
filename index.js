@@ -444,6 +444,26 @@ async function getColor(userId, subjectId) {
   }
 }
 
+function formatDateTime(dateTime) {
+  // Mendapatkan komponen tanggal, bulan, tahun, jam, menit, dan detik
+  const seconds = dateTime._seconds || 0;
+  const milliseconds = dateTime._nanoseconds / 1000000 || 0;
+  const date = new Date(seconds * 1000 + milliseconds);
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const secondsString = String(date.getSeconds()).padStart(2, '0');
+  const millisecondsString = String(date.getMilliseconds()).padStart(3, '0');
+
+  // Membuat string dengan format yang diinginkan
+  return `${year}-${month}-${day} ${hours}:${minutes}:${secondsString}.${millisecondsString}`;
+}
+
+
+
 app.get('/users/:userId/rencanaMandiri', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -459,7 +479,6 @@ app.get('/users/:userId/rencanaMandiri', async (req, res) => {
     const rencanaMandiriSnapshot = await db.collection('users').doc(userId).collection('rencanaMandiri')
                                           .where('semesterId', '==', currentSemesterId).get();
                                    
-                                      
     const rencanaMandiriList = [];
 
     // Membuat array dari promise yang akan menunggu semua operasi asinkron selesai
@@ -468,8 +487,13 @@ app.get('/users/:userId/rencanaMandiri', async (req, res) => {
      
       // Mendapatkan warna dari mata kuliah
       const color = await getColor(userId, data.subjectId);
- 
-      rencanaMandiriList.push({ id: doc.id, title: data.title, dateTimeDeadline: data.dateTimeDeadline, color });
+      
+      // Mengonversi format tanggal dan waktu
+      const formattedDateTimeDeadline = formatDateTime(data.dateTimeDeadline);
+      const formattedDateTimeReminder = formatDateTime(data.dateTimeReminder);
+      
+      // Menambahkan ke dalam array
+      rencanaMandiriList.push({ id: doc.id, title: data.title, dateTimeReminder: formattedDateTimeReminder, dateTimeDeadline: formattedDateTimeDeadline, color });
     });
 
     // Menunggu semua promise selesai
@@ -501,10 +525,20 @@ app.get('/users/:userId/rencanaMandiri/:rencanaMandiriId', async (req, res) => {
     // Mendapatkan warna dari mata kuliah
     const color = await getColor(userId, data.subjectId);
  
-    // Menyusun respons dengan seluruh data rencana mandiri dan warna
+    // Mendapatkan tanggal dan waktu yang diformat
+    const formattedDateTimeReminder = formatDateTime(data.dateTimeReminder);
+    const formattedDateTimeDeadline = formatDateTime(data.dateTimeDeadline);
+
+    // Menyusun respons dengan seluruh data rencana mandiri, termasuk warna dan tanggal serta waktu yang diformat
     const responseData = {
       id: rencanaMandiriDoc.id,
-      ...data,
+      title: data.title,
+      type: data.type,
+      subjectId: data.subjectId,
+      semesterId: data.semesterId,
+      dateTimeReminder: formattedDateTimeReminder,
+      dateTimeDeadline: formattedDateTimeDeadline,
+      notes: data.notes,
       color
     };
 
@@ -514,6 +548,7 @@ app.get('/users/:userId/rencanaMandiri/:rencanaMandiriId', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch rencana mandiri' });
   }
 });
+
 
 
 

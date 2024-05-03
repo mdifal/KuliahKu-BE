@@ -397,7 +397,7 @@ app.post('/users/:userId/semesters', async (req, res) => {
 app.post('/users/:userId/rencanaMandiri', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { type, subjectId, date, time, notes } = req.body;
+    const { type, subjectId, dateReminder, timeReminder, dateDeadline, timeDeadline, notes } = req.body;
 
     // Mendapatkan ID semester berlangsung
     const currentSemesterId = await getCurrentSemester(userId);
@@ -407,14 +407,16 @@ app.post('/users/:userId/rencanaMandiri', async (req, res) => {
     }
 
     // Mengonversi tanggal dan waktu menjadi timestamp
-    const dateTime = new Date(`${date}T${time}`).getTime();
+    const dateTimeReminder = new Date(`${dateReminder}T${timeReminder}`).getTime();
+    const dateTimeDeadline = new Date(`${dateDeadline}T${timeDeadline}`).getTime();
 
     // Membuat rencana mandiri baru untuk user dengan userId tertentu
     const rencanaMandiriRef = await db.collection('users').doc(userId).collection('rencanaMandiri').add({
       semesterId: currentSemesterId,
       type,
       subjectId,
-      dateTime: new Date(dateTime),
+      dateTimeReminder: new Date(dateTimeReminder),
+      dateTimeDeadline: new Date(dateTimeDeadline),
       notes
     });
 

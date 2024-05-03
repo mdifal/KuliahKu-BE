@@ -310,13 +310,54 @@ app.get('/users/:userId/jadwalKuliahSemester', async (req, res) => {
   }
 });
 
-
-app.get('/users/:userId/jadwalKuliah/names', async (req, res) => {
+app.get('/users/:userId/jadwalKuliah/now', async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Mengambil semua jadwal mata kuliah untuk user dengan userId tertentu
-    const schedulesSnapshot = await db.collection('users').doc(userId).collection('schedules').get();
+    // Mendapatkan ID semester berlangsung
+    const currentSemesterId = await getCurrentSemester(userId);
+
+    if (!currentSemesterId) {
+      return res.status(400).json({ error: 'No current semester found' });
+    }
+
+    // Mengambil semua jadwal mata kuliah untuk user dengan userId tertentu pada semester berlangsung
+    const schedulesSnapshot = await db.collection('users').doc(userId).collection('schedules')
+      .where('semesterId', '==', currentSemesterId)
+      .get();
+
+    const schedules = [];
+    schedulesSnapshot.forEach(doc => {
+      const scheduleData = { id: doc.id, ...doc.data() };
+      // Konversi timestamp ke format yang lebih mudah dibaca jika perlu
+
+      schedules.push(scheduleData);
+    });
+
+    res.json(schedules);
+  } catch (error) {
+    console.error('Error fetching schedules:', error);
+    res.status(500).json({ error: 'Failed to fetch schedules' });
+  }
+});
+
+
+
+app.get('/users/:userId/jadwalKuliahNames/now', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Mendapatkan ID semester berlangsung
+    const currentSemesterId = await getCurrentSemester(userId);
+
+    if (!currentSemesterId) {
+      return res.status(400).json({ error: 'No current semester found' });
+    }
+
+    // Mengambil semua jadwal mata kuliah untuk user dengan userId tertentu dan semester yang sedang berlangsung
+    const schedulesSnapshot = await db.collection('users').doc(userId).collection('schedules')
+                                        .where('semesterId', '==', currentSemesterId).get();
+
     const courseNames = [];
     schedulesSnapshot.forEach(doc => {
       const scheduleData = doc.data();
@@ -329,6 +370,7 @@ app.get('/users/:userId/jadwalKuliah/names', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch course names' });
   }
 });
+
 
 
 app.post('/users/:userId/semesters', async (req, res) => {
@@ -355,7 +397,7 @@ app.post('/users/:userId/semesters', async (req, res) => {
 app.post('/users/:userId/rencanaMandiri', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { type, subjectId, date, time, description } = req.body;
+    const { type, subjectId, date, time, notes } = req.body;
 
     // Mendapatkan ID semester berlangsung
     const currentSemesterId = await getCurrentSemester(userId);
@@ -373,7 +415,7 @@ app.post('/users/:userId/rencanaMandiri', async (req, res) => {
       type,
       subjectId,
       dateTime: new Date(dateTime),
-      description
+      notes
     });
 
     res.status(201).json({ message: 'Rencana mandiri added successfully', id: rencanaMandiriRef.id });
@@ -387,8 +429,16 @@ app.get('/users/:userId/rencanaMandiri', async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Mengambil daftar jadwal mandiri untuk user dengan userId tertentu
-    const rencanaMandiriSnapshot = await db.collection('users').doc(userId).collection('rencanaMandiri').get();
+    // Mendapatkan ID semester berlangsung
+    const currentSemesterId = await getCurrentSemester(userId);
+
+    if (!currentSemesterId) {
+      return res.status(400).json({ error: 'No current semester found' });
+    }
+
+    // Mengambil daftar jadwal mandiri untuk user dengan userId tertentu dan semester yang sedang berlangsung
+    const rencanaMandiriSnapshot = await db.collection('users').doc(userId).collection('rencanaMandiri')
+                                          .where('semesterId', '==', currentSemesterId).get();
 
     const rencanaMandiriList = [];
     rencanaMandiriSnapshot.forEach(doc => {
@@ -401,6 +451,7 @@ app.get('/users/:userId/rencanaMandiri', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch rencana mandiri' });
   }
 });
+
 
 
   const port = process.env.PORT || 8080;

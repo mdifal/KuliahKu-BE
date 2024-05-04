@@ -274,7 +274,7 @@ app.get('/users/:userId/jadwalKuliah', async (req, res) => {
       schedules.push({ id: doc.id, ...doc.data() });
     });
 
-    res.json(schedules);
+    res.status(200).json({statusCode : "200", data : schedules});
   } catch (error) {
     console.error('Error fetching schedules:', error);
     res.status(500).json({ error: 'Failed to fetch schedules' });
@@ -303,7 +303,7 @@ app.get('/users/:userId/jadwalKuliahSemester', async (req, res) => {
       schedules.push(scheduleData);
     });
 
-    res.json(schedules);
+    res.status(200).json({statusCode : "200", data : schedules});
   } catch (error) {
     console.error('Error fetching schedules:', error);
     res.status(500).json({ error: 'Failed to fetch schedules' });

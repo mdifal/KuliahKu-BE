@@ -131,3 +131,5 @@ dist
 
 #firestore credential diractory
 /config/key.json
+
+index.js

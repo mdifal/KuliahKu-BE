@@ -15,6 +15,30 @@ const secretKey = 'secret';
 
 // Rute untuk login
 
+
+function formatDateTimeRaw(year,month,day,hours,minutes,second,milliseconds='000000') {
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${second}.${milliseconds}`;
+  }
+
+async function getDaysInRange(startDate, endDate, day) {
+    const days = [];
+    let currentDate = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Loop melalui setiap tanggal di dalam rentang
+    while (currentDate <= end) {
+        // Periksa apakah hari tanggal saat ini sesuai dengan hari yang diinginkan
+        if (currentDate.getDay() === day) {
+            days.push(new Date(currentDate)); // Menyimpan tanggal jika sesuai dengan hari yang diinginkan
+        }
+        // Pindah ke tanggal berikutnya
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return days;
+}
+
 async function getCurrentSemester(userId) {
     // Mendapatkan tanggal hari ini
     const today = new Date();
@@ -266,7 +290,7 @@ async function getCurrentSemester(userId) {
       schedulesSnapshot.forEach(doc => {
         schedules.push({ id: doc.id, ...doc.data() });
       });
-  
+      
       res.status(200).json({statusCode : "200", data : schedules});
     } catch (error) {
       console.error('Error fetching schedules:', error);
@@ -277,11 +301,12 @@ async function getCurrentSemester(userId) {
   router.get('/users/:userId/jadwalKuliahSemester', async (req, res) => {
     try {
       const { userId } = req.params;
-      const { semesterId } = req.query; // Mendapatkan semesterId dari query parameter
+      const { semesterId, firstDayWeek, lastDayWeek } = req.query; // Mendapatkan semesterId dari query parameter
   
       // Mengambil semua jadwal mata kuliah untuk user dengan userId tertentu pada semester tertentu
       let schedulesCollection = db.collection('users').doc(userId).collection('schedules');
-  
+        
+
       // Jika ada filter semesterId
       if (semesterId) {
         schedulesCollection = schedulesCollection.where('semesterId', '==', semesterId);
@@ -306,6 +331,7 @@ async function getCurrentSemester(userId) {
   router.get('/users/:userId/jadwalKuliah/now', async (req, res) => {
     try {
       const { userId } = req.params;
+      const { firstDayWeek, lastDayWeek } = req.query;
   
       // Mendapatkan ID semester berlangsung
       const currentSemesterId = await getCurrentSemester(userId);
@@ -320,12 +346,26 @@ async function getCurrentSemester(userId) {
         .get();
   
       const schedules = [];
-      schedulesSnapshot.forEach(doc => {
+      const promises = schedulesSnapshot.docs.map(async doc => {
         const scheduleData = { id: doc.id, ...doc.data() };
         // Konversi timestamp ke format yang lebih mudah dibaca jika perlu
-  
+        var daysInRange = await getDaysInRange(firstDayWeek, lastDayWeek, doc.data().day);
+       const startTime = scheduleData.startTime;
+
+       const endTime = scheduleData.endTime;
+       const startTimeParts = startTime.split(":");
+       const endTimeParts = endTime.split(":");
+
+        daysInRange = new Date(daysInRange);
+
+        // Format tanggal untuk startTime dan endTime
+        scheduleData.startTime = formatDateTimeRaw(daysInRange.getFullYear(),daysInRange.getMonth(),daysInRange.getDate(),startTimeParts[0],startTimeParts[1],startTimeParts[2]);
+        scheduleData.endTime = formatDateTimeRaw(daysInRange.getFullYear(),daysInRange.getMonth(),daysInRange.getDate(),endTimeParts[0],endTimeParts[1],endTimeParts[2]);
+      
         schedules.push(scheduleData);
       });
+      
+      await Promise.all(promises);
   
       res.json(schedules);
     } catch (error) {
@@ -346,6 +386,8 @@ async function getCurrentSemester(userId) {
       if (!currentSemesterId) {
         return res.status(400).json({ error: 'No current semester found' });
       }
+
+      
   
       // Mengambil semua jadwal mata kuliah untuk user dengan userId tertentu dan semester yang sedang berlangsung
       const schedulesSnapshot = await db.collection('users').doc(userId).collection('schedules')

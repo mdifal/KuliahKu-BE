@@ -20,7 +20,7 @@ function formatDateTimeRaw(year, month, day, hours, minutes, second, millisecond
   
     const formattedMonth = String(month).padStart(2, '0');
     const formattedDay = String(day).padStart(2, '0');
-  
+ 
     return `${year}-${formattedMonth}-${formattedDay} ${hours}:${minutes}:${second}.${milliseconds}`;
   }
 
@@ -360,10 +360,10 @@ async function getCurrentSemester(userId) {
        const endTimeParts = endTime.split(":");
 
         daysInRange = new Date(daysInRange);
-
+        console.log(daysInRange);
         // Format tanggal untuk startTime dan endTime
-        scheduleData.startTime = formatDateTimeRaw(daysInRange.getFullYear(),daysInRange.getMonth(),daysInRange.getDate(),startTimeParts[0],startTimeParts[1],startTimeParts[2]);
-        scheduleData.endTime = formatDateTimeRaw(daysInRange.getFullYear(),daysInRange.getMonth(),daysInRange.getDate(),endTimeParts[0],endTimeParts[1],endTimeParts[2]);
+        scheduleData.startTime = formatDateTimeRaw(daysInRange.getFullYear(),daysInRange.getMonth()+1,daysInRange.getDate(),startTimeParts[0],startTimeParts[1],startTimeParts[2]);
+        scheduleData.endTime = formatDateTimeRaw(daysInRange.getFullYear(),daysInRange.getMonth()+1,daysInRange.getDate(),endTimeParts[0],endTimeParts[1],endTimeParts[2]);
       
         schedules.push(scheduleData);
       });

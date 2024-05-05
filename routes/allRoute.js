@@ -417,7 +417,7 @@ async function getCurrentSemester(userId) {
 
 
   //Jadwal Kuliah Detail
-  router.get('/users/:userId/jadwalKuliah/:jadwalKuliahId', async (req, res) => {
+  router.get('/users/:userId/jadwalKuliah/detail/:jadwalKuliahId', async (req, res) => {
     try {
       const { userId, jadwalKuliahId } = req.params;
   
@@ -440,7 +440,51 @@ async function getCurrentSemester(userId) {
     }
   });
   
-  
+  //Edit Jadwal Kuliah
+  router.put('/users/:userId/jadwalKuliah/update/:jadwalKuliahId', async (req, res) => {
+    try {
+        const { userId, jadwalKuliahId } = req.params;
+        const { subject, dosen, ruang, day, startTime, endTime, color } = req.body;
+
+        // Mengonversi waktu menjadi timestamp
+
+        // Update jadwal mata kuliah berdasarkan ID jadwal tertentu
+        const scheduleRef = db.collection('users').doc(userId).collection('schedules').doc(jadwalKuliahId);
+        const updateData = {};
+        if (subject) updateData.subject = subject;
+        if (dosen) updateData.dosen = dosen;
+        if (ruang) updateData.ruang = ruang;
+        if (day !== undefined) updateData.day = day;
+        if (startTime) updateData.startTime = startTime;
+        if (endTime) updateData.endTime = endTime;
+        if (color) updateData.color = color;
+
+        await scheduleRef.update(updateData);
+
+        res.status(200).json({ statusCode: "200", message: 'Schedule updated successfully', id: jadwalKuliahId });
+    } catch (error) {
+        console.error('Error updating schedule:', error);
+        res.status(500).json({ error: 'Failed to update schedule' });
+    }
+});
+
+//delet jadwal kuliah
+router.delete('/users/:userId/jadwalKuliah/delete/:jadwalKuliahId', async (req, res) => {
+    try {
+        const { userId, jadwalKuliahId } = req.params;
+
+        // Hapus jadwal mata kuliah berdasarkan ID jadwal tertentu
+        const scheduleRef = db.collection('users').doc(userId).collection('schedules').doc(jadwalKuliahId);
+        await scheduleRef.delete();
+
+        res.status(200).json({ statusCode: "200", message: 'Schedule deleted successfully', id: jadwalKuliahId });
+    } catch (error) {
+        console.error('Error deleting schedule:', error);
+        res.status(500).json({ error: 'Failed to delete schedule' });
+    }
+});
+
+
   
   
   router.post('/users/:userId/semesters', async (req, res) => {
@@ -576,7 +620,7 @@ async function getCurrentSemester(userId) {
     }
   });
   
-  
+  //Get Rencana Detail
   router.get('/users/:userId/rencanaMandiri/:rencanaMandiriId', async (req, res) => {
     try {
       const { userId, rencanaMandiriId } = req.params;
@@ -618,5 +662,60 @@ async function getCurrentSemester(userId) {
       res.status(500).json({ error: 'Failed to fetch rencana mandiri' });
     }
   });
+
+
+  //Edit Rencana
+  router.put('/users/:userId/rencanaMandiri/update/:rencanaMandiriId', async (req, res) => {
+    try {
+        const { userId, rencanaMandiriId } = req.params;
+        const { type, subjectId, title, dateReminder, timeReminder, dateDeadline, timeDeadline, notes } = req.body;
+
+        // Mendapatkan rencana mandiri yang akan diupdate
+        const rencanaMandiriRef = db.collection('users').doc(userId).collection('rencanaMandiri').doc(rencanaMandiriId);
+        const rencanaMandiriData = (await rencanaMandiriRef.get()).data();
+
+        // Mengonversi tanggal dan waktu menjadi timestamp
+        const dateTimeReminder = dateReminder && timeReminder ? new Date(`${dateReminder}T${timeReminder}`).getTime() : rencanaMandiriData.dateTimeReminder;
+        const dateTimeDeadline = dateDeadline && timeDeadline ? new Date(`${dateDeadline}T${timeDeadline}`).getTime() : rencanaMandiriData.dateTimeDeadline;
+
+        // Objek untuk menyimpan data yang akan diupdate
+        const updateData = {};
+        if (title) updateData.title = title;
+        if (type) updateData.type = type;
+        if (subjectId) updateData.subjectId = subjectId;
+        if (dateReminder && timeReminder) updateData.dateTimeReminder = new Date(dateTimeReminder);
+        if (dateDeadline && timeDeadline) updateData.dateTimeDeadline = new Date(dateTimeDeadline);
+        if (notes) updateData.notes = notes;
+
+        // Update rencana mandiri jika ada data yang diisi
+        if (Object.keys(updateData).length > 0) {
+            await rencanaMandiriRef.update(updateData);
+        }
+
+        res.status(200).json({ statusCode: "200", message: 'Rencana mandiri updated successfully', id: rencanaMandiriId });
+    } catch (error) {
+        console.error('Error updating rencana mandiri:', error);
+        res.status(500).json({ error: 'Failed to update rencana mandiri' });
+    }
+});
+
+
+//Delete Rencana
+router.delete('/users/:userId/rencanaMandiri/delete/:rencanaMandiriId', async (req, res) => {
+    try {
+        const { userId, rencanaMandiriId } = req.params;
+
+        // Hapus rencana mandiri berdasarkan ID rencana mandiri tertentu
+        const rencanaMandiriRef = db.collection('users').doc(userId).collection('rencanaMandiri').doc(rencanaMandiriId);
+        await rencanaMandiriRef.delete();
+
+        res.status(200).json({ statusCode: "200", message: 'Rencana mandiri deleted successfully', id: rencanaMandiriId });
+    } catch (error) {
+        console.error('Error deleting rencana mandiri:', error);
+        res.status(500).json({ error: 'Failed to delete rencana mandiri' });
+    }
+});
+
+
 
 module.exports = router;

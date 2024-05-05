@@ -331,6 +331,12 @@ async function getCurrentSemester(userId) {
     }
   });
   
+
+  function getNamaHari(angkaHari) {
+    const namaHari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+    return namaHari[angkaHari];
+  }
+
   router.get('/users/:userId/jadwalKuliah/now', async (req, res) => {
     try {
       const { userId } = req.params;
@@ -358,7 +364,7 @@ async function getCurrentSemester(userId) {
        const endTime = scheduleData.endTime;
        const startTimeParts = startTime.split(":");
        const endTimeParts = endTime.split(":");
-
+        scheduleData.day = getNamaHari(scheduleData.day);
         daysInRange = new Date(daysInRange);
         console.log(daysInRange);
         // Format tanggal untuk startTime dan endTime

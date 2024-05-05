@@ -16,9 +16,12 @@ const secretKey = 'secret';
 // Rute untuk login
 
 
-function formatDateTimeRaw(year,month,day,hours,minutes,second,milliseconds='000000') {
-
-    return `${year}-${month}-${day} ${hours}:${minutes}:${second}.${milliseconds}`;
+function formatDateTimeRaw(year, month, day, hours, minutes, second, milliseconds = '000000') {
+  
+    const formattedMonth = String(month).padStart(2, '0');
+    const formattedDay = String(day).padStart(2, '0');
+  
+    return `${year}-${formattedMonth}-${formattedDay} ${hours}:${minutes}:${second}.${milliseconds}`;
   }
 
 async function getDaysInRange(startDate, endDate, day) {
@@ -405,6 +408,32 @@ async function getCurrentSemester(userId) {
       res.status(500).json({ error: 'Failed to fetch course names' });
     }
   });
+
+
+  //Jadwal Kuliah Detail
+  router.get('/users/:userId/jadwalKuliah/:jadwalKuliahId', async (req, res) => {
+    try {
+      const { userId, jadwalKuliahId } = req.params;
+  
+      // Mendapatkan data jadwal kuliah berdasarkan user ID dan ID jadwal kuliah
+      const jadwalKuliahDoc = await db.collection('users').doc(userId).collection('schedules').doc(jadwalKuliahId).get();
+  
+      // Memeriksa apakah jadwal kuliah ditemukan
+      if (!jadwalKuliahDoc.exists) {
+        return res.status(404).json({ error: 'Jadwal kuliah not found' });
+      }
+  
+      // Mendapatkan data jadwal kuliah
+      const jadwalKuliahData = { id: jadwalKuliahDoc.id, ...jadwalKuliahDoc.data() };
+  
+
+      res.status(200).json({ statusCode: '200', data: jadwalKuliahData });
+    } catch (error) {
+      console.error('Error fetching jadwal kuliah:', error);
+      res.status(500).json({ error: 'Failed to fetch jadwal kuliah' });
+    }
+  });
+  
   
   
   

@@ -367,7 +367,7 @@ async function getCurrentSemester(userId) {
       
       await Promise.all(promises);
   
-      res.json(schedules);
+      res.json({statusCode : '200',data: schedules});
     } catch (error) {
       console.error('Error fetching schedules:', error);
       res.status(500).json({ error: 'Failed to fetch schedules' });
@@ -421,7 +421,7 @@ async function getCurrentSemester(userId) {
         sks
       });
   
-      res.status(201).json({ message: 'Semester added successfully', id: semesterRef.id });
+      res.status(201).json({statusCode : '200',  message: 'Semester added successfully', id: semesterRef.id });
     } catch (error) {
       console.error('Error adding semester:', error);
       res.status(500).json({ error: 'Failed to add semester' });
@@ -456,7 +456,7 @@ async function getCurrentSemester(userId) {
         notes
       });
   
-      res.status(200).json({ message: 'Rencana mandiri added successfully', id: rencanaMandiriRef.id });
+      res.status(200).json({statusCode : '200', message: 'Rencana mandiri added successfully', id: rencanaMandiriRef.id });
     } catch (error) {
       console.error('Error adding rencana mandiri:', error);
       res.status(500).json({ error: 'Failed to add rencana mandiri' });

@@ -193,6 +193,20 @@ async function getCurrentSemester(userId) {
     }
   });
 
+  function formatDateYMD(dateString) {
+    // Buat objek Date dari string tanggal
+    const date = new Date(dateString);
+    
+    // Ambil tahun, bulan, dan tanggal dari objek Date
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    // Gabungkan tahun, bulan, dan tanggal dalam format YYYY-MM-DD
+    const formattedDate = `${year}-${month}-${day}`;
+    
+    return formattedDate;
+  }
 
   router.get('/profile/edit/:userId', async (req, res) => {
     try {
@@ -205,7 +219,9 @@ async function getCurrentSemester(userId) {
       }
       
       const { username, fullname, college, dob } = userData.data();
-      formattedDob = formatDateTime(dob);
+      var formattedDob = formatDateTime(dob);
+      formattedDob = formatDateYMD(formattedDob);
+      console.log(formattedDob);
       res.status(200).json({ username, fullname, college: college, dob: formattedDob });
     } catch(error) {
       console.error('Error fetching user data:', error);

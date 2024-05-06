@@ -174,15 +174,78 @@ async function getCurrentSemester(userId) {
   
   
   
-    router.get('/read/:id', async (req, res) => {
-      try {
-        const userRef = db.collection("users").doc(req.params.id);
-        const response = await userRef.get();
-        res.send(response.data());
-      } catch(error) {
-        res.send(error);
+  router.get('/profile/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+  
+      const userData = await db.collection("users").doc(userId).get();
+  
+      if (!userData.exists) {
+        return res.status(404).json({ error: 'User not found' });
       }
-    });
+      
+      const { username, fullname} = userData.data();
+
+      res.status(200).json({ username, fullname});
+    } catch(error) {
+      console.error('Error fetching user data:', error);
+      res.status(500).json({ error: 'Failed to fetch user data' });
+    }
+  });
+
+
+  router.get('/profile/edit/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+  
+      const userData = await db.collection("users").doc(userId).get();
+  
+      if (!userData.exists) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const { username, fullname, college, dob } = userData.data();
+      formattedDob = formatDateTime(dob);
+      res.status(200).json({ username, fullname, college: college, dob: formattedDob });
+    } catch(error) {
+      console.error('Error fetching user data:', error);
+      res.status(500).json({ error: 'Failed to fetch user data' });
+    }
+  });
+  
+  router.put('/profile/edit/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+  
+      // Mendapatkan data yang akan diubah dari body request
+      const { username, fullname, college, dob } = req.body;
+  
+      // Mendapatkan dokumen pengguna
+      const userDoc = db.collection("users").doc(userId);
+  
+      // Memeriksa apakah pengguna ada
+      const userSnapshot = await userDoc.get();
+      if (!userSnapshot.exists) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+  
+      // Data baru yang akan diupdate
+      const newData = {};
+      if (username) newData.username = username;
+      if (fullname) newData.fullname = fullname;
+      if (college) newData.college = college;
+      if (dob) newData.dob = dob;
+  
+      // Melakukan update data pengguna
+      await userDoc.update(newData);
+  
+      res.status(200).json({ message: 'User data updated successfully' });
+    } catch(error) {
+      console.error('Error updating user data:', error);
+      res.status(500).json({ error: 'Failed to update user data' });
+    }
+  });
+  
   
     router.post('/update', async(req, res) => {
       try {

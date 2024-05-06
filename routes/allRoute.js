@@ -212,6 +212,51 @@ async function getCurrentSemester(userId) {
       res.status(500).json({ error: 'Failed to fetch user data' });
     }
   });
+
+  router.post('/profile/edit/password/:userId', async (req, res) => {
+    try {
+      const { currentPassword, newPassword, password_confirmation } = req.body;
+      const { userId } = req.params;
+  
+      // Mendapatkan data pengguna dari database
+      const userDoc = await db.collection("users").doc(userId).get();
+      
+      if (!userDoc.exists) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const userData = userDoc.data();
+      const hashedPassword = userData.password;
+      
+      // Memeriksa apakah password yang dimasukkan oleh pengguna cocok dengan hash yang disimpan
+      const passwordMatch = await bcrypt.compare(currentPassword, hashedPassword);
+  
+      if (!passwordMatch) {
+        return res.status(400).json({ error: 'Current password is incorrect' });
+      }
+   
+  
+      // Memeriksa apakah password baru sama dengan konfirmasi password baru
+      if (newPassword !== password_confirmation) {
+        return res.status(400).json({ error: 'New password and confirm password do not match' });
+      }
+  
+      // Mengenkripsi password baru
+      const newHashedPassword = await bcrypt.hash(newPassword, 10);
+  
+      // Melakukan pembaruan password
+      await db.collection("users").doc(userId).update({
+        password: newHashedPassword
+      });
+  
+      res.status(200).json({ message: 'Password updated successfully' });
+    } catch (error) {
+      console.error('Error updating password:', error);
+      res.status(500).json({ error: 'Failed to update password' });
+    }
+  });
+  
+  
   
   router.put('/profile/edit/:userId', async (req, res) => {
     try {

@@ -805,7 +805,7 @@ function getTime(dateTime) {
   });
 
    //Get Rencana Detail for Edit
-   router.get('/users/:userId/rencanaMandiri/edit/:rencanaMandiriId', async (req, res) => {
+   router.get('/users/:userId/rencanaMandiri/detail/:rencanaMandiriId', async (req, res) => {
     try {
       const { userId, rencanaMandiriId } = req.params;
       

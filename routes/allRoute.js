@@ -630,6 +630,24 @@ router.delete('/users/:userId/jadwalKuliah/delete/:jadwalKuliahId', async (req, 
     }
   });
   
+  function getDate(dateTime) {
+    const date = new Date(dateTime);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// Fungsi untuk mengambil waktu dari datetime
+function getTime(dateTime) {
+    const date = new Date(dateTime);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    const milliseconds = String(date.getMilliseconds()).padStart(3, '0');
+    return `${hours}:${minutes}:${seconds}.${milliseconds}`;
+}
+
   // Endpoint untuk menambahkan rencana mandiri
   router.post('/users/:userId/rencanaMandiri', async (req, res) => {
     try {
@@ -775,6 +793,55 @@ router.delete('/users/:userId/jadwalKuliah/delete/:jadwalKuliahId', async (req, 
         semesterId: data.semesterId,
         dateTimeReminder: formattedDateTimeReminder,
         dateTimeDeadline: formattedDateTimeDeadline,
+        notes: data.notes,
+        color
+      };
+  
+      res.status(200).json({statusCode : '200', data : responseData});
+    } catch (error) {
+      console.error('Error fetching rencana mandiri:', error);
+      res.status(500).json({ error: 'Failed to fetch rencana mandiri' });
+    }
+  });
+
+   //Get Rencana Detail for Edit
+   router.get('/users/:userId/rencanaMandiri/edit/:rencanaMandiriId', async (req, res) => {
+    try {
+      const { userId, rencanaMandiriId } = req.params;
+      
+      // Mendapatkan data rencana mandiri berdasarkan userId dan rencanaMandiriId
+      const rencanaMandiriDoc = await db.collection('users').doc(userId).collection('rencanaMandiri').doc(rencanaMandiriId).get();
+      
+      // Memeriksa apakah rencana mandiri ditemukan
+      if (!rencanaMandiriDoc.exists) {
+        return res.status(404).json({ error: 'Rencana mandiri not found' });
+      }
+  
+      // Mendapatkan data rencana mandiri
+      const data = rencanaMandiriDoc.data();
+      
+      // Mendapatkan warna dari mata kuliah
+      const color = await getColor(userId, data.subjectId);
+      console.log(data.dateTimeReminder);
+      // Mendapatkan tanggal dan waktu yang diformat
+      const formattedDateTimeReminder = formatDateTime(data.dateTimeReminder);
+      const formattedDateTimeDeadline = formatDateTime(data.dateTimeDeadline);
+      const dateReminder = getDate(formattedDateTimeReminder);
+      const timeReminder = getTime(formattedDateTimeReminder);
+      const dateDeadline = getDate(formattedDateTimeDeadline);
+      const timeDeadline = getTime(formattedDateTimeDeadline);
+
+      // Menyusun respons dengan seluruh data rencana mandiri, termasuk warna dan tanggal serta waktu yang diformat
+      const responseData = {
+        id: rencanaMandiriDoc.id,
+        title: data.title,
+        type: data.type,
+        subjectId: data.subjectId,
+        semesterId: data.semesterId,
+        dateReminder: dateReminder,
+        timeReminder :timeReminder ,
+        dateDeadline: dateDeadline,
+        timeDeadline:timeDeadline ,
         notes: data.notes,
         color
       };

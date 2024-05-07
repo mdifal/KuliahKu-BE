@@ -335,14 +335,14 @@ async function getCurrentSemester(userId) {
   router.post('/users/:userId/time-records', async (req, res) => {
     try {
       const { userId } = req.params;
-      const { startTime, endTime, subject, jenis } = req.body;
+      const { startTime, endTime, subject, type } = req.body;
   
       // Membuat time record baru untuk user dengan userId tertentu
       const timeRecordRef = await db.collection('users').doc(userId).collection('time_records').add({
         startTime,
         endTime,
         subject,
-        jenis
+        type
       });
   
       res.status(201).json({ message: 'Time record added successfully', id: timeRecordRef.id });

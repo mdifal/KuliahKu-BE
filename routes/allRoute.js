@@ -826,10 +826,8 @@ function getTime(dateTime) {
       // Mendapatkan tanggal dan waktu yang diformat
       const formattedDateTimeReminder = formatDateTime(data.dateTimeReminder);
       const formattedDateTimeDeadline = formatDateTime(data.dateTimeDeadline);
-      const dateReminder = getDate(formattedDateTimeReminder);
-      const timeReminder = getTime(formattedDateTimeReminder);
-      const dateDeadline = getDate(formattedDateTimeDeadline);
-      const timeDeadline = getTime(formattedDateTimeDeadline);
+      console.log(formattedDateTimeDeadline);
+
 
       // Menyusun respons dengan seluruh data rencana mandiri, termasuk warna dan tanggal serta waktu yang diformat
       const responseData = {
@@ -838,10 +836,8 @@ function getTime(dateTime) {
         type: data.type,
         subjectId: data.subjectId,
         semesterId: data.semesterId,
-        dateReminder: dateReminder,
-        timeReminder :timeReminder ,
-        dateDeadline: dateDeadline,
-        timeDeadline:timeDeadline ,
+        dateTimeReminder: formattedDateTimeReminder,
+        dateTimeDeadline: formattedDateTimeDeadline,
         notes: data.notes,
         color
       };

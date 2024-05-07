@@ -219,10 +219,9 @@ async function getCurrentSemester(userId) {
       }
       
       const { username, fullname, college, dob } = userData.data();
-      var formattedDob = formatDateTime(dob);
-      formattedDob = formatDateYMD(formattedDob);
-      console.log(formattedDob);
-      res.status(200).json({ username, fullname, college: college, dob: formattedDob });
+      console.log(dob);
+  
+      res.status(200).json({ username, fullname, college: college, dob: dob });
     } catch(error) {
       console.error('Error fetching user data:', error);
       res.status(500).json({ error: 'Failed to fetch user data' });
@@ -762,7 +761,7 @@ router.delete('/users/:userId/jadwalKuliah/delete/:jadwalKuliahId', async (req, 
       
       // Mendapatkan warna dari mata kuliah
       const color = await getColor(userId, data.subjectId);
-   
+      console.log(data.dateTimeReminder);
       // Mendapatkan tanggal dan waktu yang diformat
       const formattedDateTimeReminder = formatDateTime(data.dateTimeReminder);
       const formattedDateTimeDeadline = formatDateTime(data.dateTimeDeadline);

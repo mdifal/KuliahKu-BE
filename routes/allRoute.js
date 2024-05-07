@@ -342,7 +342,7 @@ async function getCurrentSemester(userId) {
         startTime,
         endTime,
         subject,
-        type
+        jenis
       });
   
       res.status(201).json({ message: 'Time record added successfully', id: timeRecordRef.id });

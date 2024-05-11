@@ -12,6 +12,17 @@ const router = express.Router();
 const db = fs.firestore();
 
 const secretKey = 'secret';
+const multer = require('multer');
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname);
+  },
+});
+const upload = multer({ storage: storage });
 
 // Rute untuk login
 
@@ -649,7 +660,7 @@ function getTime(dateTime) {
 }
 
   // Endpoint untuk menambahkan rencana mandiri
-  router.post('/users/:userId/rencanaMandiri', async (req, res) => {
+  router.post('/users/:userId/rencanaMandiri',upload.single('file'), async (req, res) => {
     try {
       const { userId } = req.params;
       const { type, subjectId, title, dateReminder, timeReminder, dateDeadline, timeDeadline, notes } = req.body;

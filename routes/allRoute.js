@@ -417,6 +417,9 @@ async function getCurrentSemester(userId) {
   });
   
   
+
+
+
   router.get('/users/:userId/jadwalKuliah', async (req, res) => {
     try {
       const { userId } = req.params;
@@ -435,42 +438,77 @@ async function getCurrentSemester(userId) {
     }
   });
   
-  router.get('/users/:userId/jadwalKuliahSemester', async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const { semesterId, firstDayWeek, lastDayWeek } = req.query; // Mendapatkan semesterId dari query parameter
-  
-      // Mengambil semua jadwal mata kuliah untuk user dengan userId tertentu pada semester tertentu
-      let schedulesCollection = db.collection('users').doc(userId).collection('schedules');
-        
 
-      // Jika ada filter semesterId
-      if (semesterId) {
-        schedulesCollection = schedulesCollection.where('semesterId', '==', semesterId);
-      }
-  
-      const schedulesSnapshot = await schedulesCollection.get();
-      const schedules = [];
-      schedulesSnapshot.forEach(doc => {
-        const scheduleData = { id: doc.id, ...doc.data() };
-        // Konversi timestamp ke format yang lebih mudah dibaca jika perlu
-  
-        schedules.push(scheduleData);
-      });
-  
-      res.status(200).json({statusCode : "200", data : schedules});
-    } catch (error) {
-      console.error('Error fetching schedules:', error);
-      res.status(500).json({ error: 'Failed to fetch schedules' });
-    }
-  });
-  
 
   function getNamaHari(angkaHari) {
     const namaHari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
     return namaHari[angkaHari];
   }
 
+  async function getSchedules(userId, semesterId, firstDayWeek, lastDayWeek) {
+    const schedulesSnapshot = await db.collection('users').doc(userId).collection('schedules')
+      .where('semesterId', '==', semesterId)
+      .get();
+  
+    const schedules = [];
+    const promises = schedulesSnapshot.docs.map(async doc => {
+      const scheduleData = { id: doc.id, ...doc.data() };
+      // Konversi timestamp ke format yang lebih mudah dibaca jika perlu
+      let daysInRange = await getDaysInRange(firstDayWeek, lastDayWeek, doc.data().day);
+      const startTime = scheduleData.startTime;
+      const endTime = scheduleData.endTime;
+      const startTimeParts = startTime.split(":");
+      const endTimeParts = endTime.split(":");
+      scheduleData.day = getNamaHari(scheduleData.day);
+      daysInRange = new Date(daysInRange);
+      scheduleData.startTime = formatDateTimeRaw(daysInRange.getFullYear(), daysInRange.getMonth() + 1, daysInRange.getDate(), startTimeParts[0], startTimeParts[1], startTimeParts[2]);
+      scheduleData.endTime = formatDateTimeRaw(daysInRange.getFullYear(), daysInRange.getMonth() + 1, daysInRange.getDate(), endTimeParts[0], endTimeParts[1], endTimeParts[2]);
+      schedules.push(scheduleData);
+    });
+  
+    await Promise.all(promises);
+  
+    return schedules;
+  }
+  
+  // Fungsi untuk mendapatkan nama-nama jadwal berdasarkan userId dan semesterId
+  async function getScheduleNames(userId, semesterId) {
+    const schedulesSnapshot = await db.collection('users').doc(userId).collection('schedules')
+      .where('semesterId', '==', semesterId)
+      .get();
+  
+    const courseNames = [];
+    schedulesSnapshot.forEach(doc => {
+      const scheduleData = doc.data();
+      courseNames.push(scheduleData.subject);
+    });
+  
+    return courseNames;
+  }
+  
+  // Route untuk mendapatkan jadwal kuliah berdasarkan semesterId atau current semester
+  router.get('/users/:userId/jadwalKuliah/semester/:semesterId?', async (req, res) => {
+    try {
+      const { userId, semesterId } = req.params;
+      const { firstDayWeek, lastDayWeek } = req.query;
+  
+      // Jika semesterId null, dapatkan currentSemesterId
+      const selectedSemesterId = semesterId || await getCurrentSemester(userId);
+  
+      if (!selectedSemesterId) {
+        return res.status(400).json({ error: 'No current semester found' });
+      }
+  
+      const schedules = await getSchedules(userId, selectedSemesterId, firstDayWeek, lastDayWeek);
+  
+      res.status(200).json({ statusCode: '200', data: schedules });
+    } catch (error) {
+      console.error('Error fetching schedules:', error);
+      res.status(500).json({ error: 'Failed to fetch schedules' });
+    }
+  });
+  
+  // Route untuk mendapatkan jadwal kuliah saat ini
   router.get('/users/:userId/jadwalKuliah/now', async (req, res) => {
     try {
       const { userId } = req.params;
@@ -483,42 +521,16 @@ async function getCurrentSemester(userId) {
         return res.status(400).json({ error: 'No current semester found' });
       }
   
-      // Mengambil semua jadwal mata kuliah untuk user dengan userId tertentu pada semester berlangsung
-      const schedulesSnapshot = await db.collection('users').doc(userId).collection('schedules')
-        .where('semesterId', '==', currentSemesterId)
-        .get();
+      const schedules = await getSchedules(userId, currentSemesterId, firstDayWeek, lastDayWeek);
   
-      const schedules = [];
-      const promises = schedulesSnapshot.docs.map(async doc => {
-        const scheduleData = { id: doc.id, ...doc.data() };
-        // Konversi timestamp ke format yang lebih mudah dibaca jika perlu
-        var daysInRange = await getDaysInRange(firstDayWeek, lastDayWeek, doc.data().day);
-       const startTime = scheduleData.startTime;
-
-       const endTime = scheduleData.endTime;
-       const startTimeParts = startTime.split(":");
-       const endTimeParts = endTime.split(":");
-        scheduleData.day = getNamaHari(scheduleData.day);
-        daysInRange = new Date(daysInRange);
-        console.log(daysInRange);
-        // Format tanggal untuk startTime dan endTime
-        scheduleData.startTime = formatDateTimeRaw(daysInRange.getFullYear(),daysInRange.getMonth()+1,daysInRange.getDate(),startTimeParts[0],startTimeParts[1],startTimeParts[2]);
-        scheduleData.endTime = formatDateTimeRaw(daysInRange.getFullYear(),daysInRange.getMonth()+1,daysInRange.getDate(),endTimeParts[0],endTimeParts[1],endTimeParts[2]);
-      
-        schedules.push(scheduleData);
-      });
-      
-      await Promise.all(promises);
-  
-      res.json({statusCode : '200',data: schedules});
+      res.status(200).json({ statusCode: '200', data: schedules });
     } catch (error) {
       console.error('Error fetching schedules:', error);
       res.status(500).json({ error: 'Failed to fetch schedules' });
     }
   });
   
-  
-  
+  // Route untuk mendapatkan nama-nama jadwal kuliah saat ini
   router.get('/users/:userId/jadwalKuliahNames/now', async (req, res) => {
     try {
       const { userId } = req.params;
@@ -529,26 +541,15 @@ async function getCurrentSemester(userId) {
       if (!currentSemesterId) {
         return res.status(400).json({ error: 'No current semester found' });
       }
-
-      
   
-      // Mengambil semua jadwal mata kuliah untuk user dengan userId tertentu dan semester yang sedang berlangsung
-      const schedulesSnapshot = await db.collection('users').doc(userId).collection('schedules')
-                                          .where('semesterId', '==', currentSemesterId).get();
+      const courseNames = await getScheduleNames(userId, currentSemesterId);
   
-      const courseNames = [];
-      schedulesSnapshot.forEach(doc => {
-        const scheduleData = doc.data();
-        courseNames.push(scheduleData.subject);
-      });
-  
-      res.json(courseNames);
+      res.status(200).json({ statusCode: '200', data: courseNames });
     } catch (error) {
       console.error('Error fetching course names:', error);
       res.status(500).json({ error: 'Failed to fetch course names' });
     }
   });
-
 
   //Jadwal Kuliah Detail
   router.get('/users/:userId/jadwalKuliah/detail/:jadwalKuliahId', async (req, res) => {

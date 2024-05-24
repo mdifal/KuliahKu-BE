@@ -744,43 +744,61 @@ function getTime(dateTime) {
   }
   
   
-  
-  router.get('/users/:userId/rencanaMandiri', async (req, res) => {
+  async function getRencanaMandiri(userId, semesterId) {
+    const rencanaMandiriSnapshot = await db.collection('users').doc(userId).collection('rencanaMandiri')
+                                          .where('semesterId', '==', semesterId).get();
+    
+    const rencanaMandiriList = [];
+    
+    const promises = rencanaMandiriSnapshot.docs.map(async doc => {
+      const data = doc.data();
+      
+      const color = await getColor(userId, data.subjectId);
+      const formattedDateTimeDeadline = formatDateTime(data.dateTimeDeadline);
+      const formattedDateTimeReminder = formatDateTime(data.dateTimeReminder);
+      
+      rencanaMandiriList.push({ id: doc.id, title: data.title, dateTimeReminder: formattedDateTimeReminder, dateTimeDeadline: formattedDateTimeDeadline, color });
+    });
+    
+    await Promise.all(promises);
+    
+    return rencanaMandiriList;
+  }
+
+
+  router.get('/users/:userId/rencanaMandiri/', async (req, res) => {
     try {
       const { userId } = req.params;
       
-      // Mendapatkan ID semester berlangsung
       const currentSemesterId = await getCurrentSemester(userId);
   
       if (!currentSemesterId) {
         return res.status(400).json({ error: 'No current semester found' });
       }
   
-      // Mengambil daftar jadwal mandiri untuk user dengan userId tertentu dan semester yang sedang berlangsung
-      const rencanaMandiriSnapshot = await db.collection('users').doc(userId).collection('rencanaMandiri')
-                                            .where('semesterId', '==', currentSemesterId).get();
-                                     
-      const rencanaMandiriList = [];
+      const rencanaMandiriList = await getRencanaMandiri(userId, currentSemesterId);
   
-      // Membuat array dari promise yang akan menunggu semua operasi asinkron selesai
-      const promises = rencanaMandiriSnapshot.docs.map(async doc => {
-        const data = doc.data();
-       
-        // Mendapatkan warna dari mata kuliah
-        const color = await getColor(userId, data.subjectId);
-        
-        // Mengonversi format tanggal dan waktu
-        const formattedDateTimeDeadline = formatDateTime(data.dateTimeDeadline);
-        const formattedDateTimeReminder = formatDateTime(data.dateTimeReminder);
-        
-        // Menambahkan ke dalam array
-        rencanaMandiriList.push({ id: doc.id, title: data.title, dateTimeReminder: formattedDateTimeReminder, dateTimeDeadline: formattedDateTimeDeadline, color });
-      });
+      res.status(200).json({ statusCode: '200', data: rencanaMandiriList });
+    } catch (error) {
+      console.error('Error fetching rencana mandiri:', error);
+      res.status(500).json({ error: 'Failed to fetch rencana mandiri' });
+    }
+  });
+
+  router.get('/users/:userId/rencanaMandiri/semester/:semesterId?', async (req, res) => {
+    try {
+      const { userId, semesterId } = req.params;
   
-      // Menunggu semua promise selesai
-      await Promise.all(promises);
+      // Jika semesterId null, dapatkan currentSemesterId
+      const selectedSemesterId = semesterId || await getCurrentSemester(userId);
   
-      res.status(200).json({statusCode : '200', data:rencanaMandiriList});
+      if (!selectedSemesterId) {
+        return res.status(400).json({ error: 'No current semester found' });
+      }
+  
+      const rencanaMandiriList = await getRencanaMandiri(userId, selectedSemesterId);
+  
+      res.status(200).json({ statusCode: '200', data: rencanaMandiriList });
     } catch (error) {
       console.error('Error fetching rencana mandiri:', error);
       res.status(500).json({ error: 'Failed to fetch rencana mandiri' });

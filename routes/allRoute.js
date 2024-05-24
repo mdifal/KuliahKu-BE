@@ -640,6 +640,21 @@ router.delete('/users/:userId/jadwalKuliah/delete/:jadwalKuliahId', async (req, 
       res.status(500).json({ error: 'Failed to add semester' });
     }
   });
+
+  router.get('/users/:userId/semesters', async (req, res) => {
+    try {
+      const { userId } = req.params;
+  
+      // Mengambil semua semester dari user dengan userId tertentu
+      const semestersSnapshot = await db.collection('users').doc(userId).collection('semesters').get();
+      const semesters = semestersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  
+      res.status(200).json({ statusCode: '200', message: 'Semesters retrieved successfully', semesters });
+    } catch (error) {
+      console.error('Error retrieving semesters:', error);
+      res.status(500).json({ error: 'Failed to retrieve semesters' });
+    }
+  });
   
   function getDate(dateTime) {
     const date = new Date(dateTime);

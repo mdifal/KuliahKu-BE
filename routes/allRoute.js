@@ -342,25 +342,26 @@ async function getCurrentSemester(userId) {
     })
   
     // Endpoint untuk menambahkan time record untuk user tertentu
-  router.post('/users/:userId/time-records', async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const { startTime, endTime, subject, type } = req.body;
-  
-      // Membuat time record baru untuk user dengan userId tertentu
-      const timeRecordRef = await db.collection('users').doc(userId).collection('time_records').add({
-        startTime,
-        endTime,
-        subject,
-        type
-      });
-  
-      res.status(201).json({ message: 'Time record added successfully', id: timeRecordRef.id });
-    } catch (error) {
-      console.error('Error adding time record:', error);
-      res.status(500).json({ error: 'Failed to add time record' });
-    }
-  });
+    router.post('/users/:userId/time-records', async (req, res) => {
+      try {
+        const { userId } = req.params;
+        const { startTime, endTime, subject, type } = req.body;
+    
+        // Membuat time record baru untuk user dengan userId tertentu
+        const timeRecordRef = await db.collection('users').doc(userId).collection('time_records').add({
+          startTime,
+          endTime,
+          subject,
+          type,
+          date: Date.now() // Menambahkan kolom date dengan nilai Date.now()
+        });
+    
+        res.status(201).json({ message: 'Time record added successfully', id: timeRecordRef.id });
+      } catch (error) {
+        console.error('Error adding time record:', error);
+        res.status(500).json({ error: 'Failed to add time record' });
+      }
+    });
   
   // Endpoint untuk melihat time record user tertentu
   router.get('/users/:userId/time-records', async (req, res) => {
@@ -380,6 +381,91 @@ async function getCurrentSemester(userId) {
       res.status(500).json({ error: 'Failed to fetch time records' });
     }
   });
+
+  router.get('/users/:userId/time-records/now', async (req, res) => {
+    try {
+      const { userId } = req.params;
+  
+      // Mendapatkan ID semester berlangsung
+      const currentSemesterId = await getCurrentSemester(userId);
+  
+      if (!currentSemesterId) {
+        return res.status(400).json({ error: 'No current semester found' });
+      }
+  
+      // Mendapatkan daftar subjectId dari semester berlangsung
+      const subjectIds = await getSubjectIdsBySemester(userId, currentSemesterId);
+  
+      if (subjectIds.length === 0) {
+        return res.status(404).json({ error: 'No subjects found for the current semester' });
+      }
+  
+      // Mendapatkan time-records berdasarkan daftar subjectId
+      const timeRecords = await getTimeRecordsBySubjectIds(userId, subjectIds);
+  
+      res.status(200).json({ statusCode: '200', data: timeRecords });
+    } catch (error) {
+      console.error('Error fetching time records:', error);
+      res.status(500).json({ error: 'Failed to fetch time records' });
+    }
+  });
+
+  async function getSubjectIdsBySemester(userId, semesterId) {
+    const subjectsSnapshot = await db.collection('users').doc(userId).collection('schedules')
+      .where('semesterId', '==', semesterId)
+      .get();
+  
+    const subjectIds = [];
+    subjectsSnapshot.forEach(doc => {
+      subjectIds.push(doc.id);
+    });
+  
+    return subjectIds;
+  }
+  
+  // Fungsi untuk mendapatkan time-records berdasarkan daftar subjectId
+  async function getTimeRecordsBySubjectIds(userId, subjectIds) {
+    const timeRecordsSnapshot = await db.collection('users').doc(userId).collection('time_records')
+      .where('subject', 'in', subjectIds)
+      .get();
+  
+    const timeRecords = [];
+    timeRecordsSnapshot.forEach(doc => {
+      timeRecords.push({ id: doc.id, ...doc.data() });
+    });
+  
+    return timeRecords;
+  }
+  
+  // Route untuk mendapatkan time-records dari semester tertentu
+// Route untuk mendapatkan time-records dari semester tertentu atau semester berlangsung
+router.get('/users/:userId/time-records/semester/:semesterId?', async (req, res) => {
+  try {
+    const { userId, semesterId } = req.params;
+
+    // Jika semesterId null, dapatkan currentSemesterId
+    const selectedSemesterId = semesterId || await getCurrentSemester(userId);
+
+    if (!selectedSemesterId) {
+      return res.status(400).json({ error: 'No current semester found' });
+    }
+
+    // Mendapatkan daftar subjectId dari semester tertentu
+    const subjectIds = await getSubjectIdsBySemester(userId, selectedSemesterId);
+
+    if (subjectIds.length === 0) {
+      return res.status(404).json({ error: 'No subjects found for this semester' });
+    }
+
+    // Mendapatkan time-records berdasarkan daftar subjectId
+    const timeRecords = await getTimeRecordsBySubjectIds(userId, subjectIds);
+
+    res.status(200).json({ statusCode: '200', data: timeRecords });
+  } catch (error) {
+    console.error('Error fetching time records:', error);
+    res.status(500).json({ error: 'Failed to fetch time records' });
+  }
+});
   
   
   // Endpoint untuk menambahkan jadwal kuliah
@@ -456,7 +542,7 @@ async function getCurrentSemester(userId) {
       // Konversi timestamp ke format yang lebih mudah dibaca jika perlu
       let daysInRange = await getDaysInRange(firstDayWeek, lastDayWeek, doc.data().day);
       const startTime = scheduleData.startTime;
-      const endTime = scheduleData.endTime;
+      const endTime = scheduleData.endTime;n
       const startTimeParts = startTime.split(":");
       const endTimeParts = endTime.split(":");
       scheduleData.day = getNamaHari(scheduleData.day);

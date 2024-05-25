@@ -550,7 +550,7 @@ router.get('/users/:userId/time-records/semester/:semesterId?', async (req, res)
       // Konversi timestamp ke format yang lebih mudah dibaca jika perlu
       let daysInRange = await getDaysInRange(firstDayWeek, lastDayWeek, doc.data().day);
       const startTime = scheduleData.startTime;
-      const endTime = scheduleData.endTime;n
+      const endTime = scheduleData.endTime;
       const startTimeParts = startTime.split(":");
       const endTimeParts = endTime.split(":");
       scheduleData.day = getNamaHari(scheduleData.day);

@@ -354,7 +354,7 @@ async function getCurrentSemester(userId) {
       try {
         const { userId } = req.params;
         const { startTime, endTime, subject, type } = req.body;
-    
+        
         // Membuat time record baru untuk user dengan userId tertentu
         const timeRecordRef = await db.collection('users').doc(userId).collection('time_records').add({
           startTime,
@@ -370,20 +370,58 @@ async function getCurrentSemester(userId) {
         res.status(500).json({ error: 'Failed to add time record' });
       }
     });
-  
+    async function getSubjectNameById(userId, subjectId) {
+      try {
+        const subjectDoc = await db.collection('users').doc(userId).collection('schedules').doc(subjectId).get();
+        if (subjectDoc.exists) {
+          return subjectDoc.data().subject; // Asumsi bahwa nama mata pelajaran disimpan dalam field 'name'
+        } else {
+          throw new Error('Subject not found');
+        }
+      } catch (error) {
+        console.error('Error fetching subject name:', error);
+        throw error;
+      }
+    }
+    
+
   // Endpoint untuk melihat time record user tertentu
+
+  async function getTimeDifferenceInSeconds(startTime, endTime) {
+    // Split waktu mulai dan waktu selesai menjadi array jam, menit, dan detik
+    const startTimeParts = startTime.split(':');
+    const endTimeParts = endTime.split(':');
+  
+    // Buat objek Date untuk waktu mulai dan waktu selesai
+    const startDate = new Date(0, 0, 0, startTimeParts[0], startTimeParts[1], startTimeParts[2]); // 0, 0, 0 menandakan tanggal 1 Januari 1900
+    const endDate = new Date(0, 0, 0, endTimeParts[0], endTimeParts[1], endTimeParts[2]);
+  
+    // Hitung perbedaan waktu dalam milidetik
+    const differenceInMillis = endDate.getTime() - startDate.getTime();
+  
+    // Ubah perbedaan waktu dari milidetik ke detik dan kembalikan
+    return Math.abs(Math.round(differenceInMillis / 1000)); // gunakan Math.abs untuk memastikan hasilnya positif
+  }
+
   router.get('/users/:userId/time-records', async (req, res) => {
     try {
       const { userId } = req.params;
-  
+    
       // Mengambil semua time records untuk user dengan userId tertentu
       const timeRecordsSnapshot = await db.collection('users').doc(userId).collection('time_records').get();
+      
       const timeRecords = [];
-      timeRecordsSnapshot.forEach(doc => {
-        timeRecords.push({ id: doc.id, ...doc.data() });
+      const promises = timeRecordsSnapshot.docs.map(async (doc) => {
+        const data = doc.data();
+        const time = await getTimeDifferenceInSeconds(data.startTime,data.endTime);
+        const color = await getColor(userId, data.subject);
+        const subjectName = await getSubjectNameById(userId, data.subject);
+        return { id: doc.id, ...data, color, subject: subjectName, time: time };
       });
   
-      res.json(timeRecords);
+      const timeRecordsWithColor = await Promise.all(promises);
+    
+      res.json(timeRecordsWithColor);
     } catch (error) {
       console.error('Error fetching time records:', error);
       res.status(500).json({ error: 'Failed to fetch time records' });
@@ -393,24 +431,24 @@ async function getCurrentSemester(userId) {
   router.get('/users/:userId/time-records/now', async (req, res) => {
     try {
       const { userId } = req.params;
-  
+    
       // Mendapatkan ID semester berlangsung
       const currentSemesterId = await getCurrentSemester(userId);
-  
+    
       if (!currentSemesterId) {
         return res.status(400).json({ error: 'No current semester found' });
       }
-  
+    
       // Mendapatkan daftar subjectId dari semester berlangsung
       const subjectIds = await getSubjectIdsBySemester(userId, currentSemesterId);
-  
+    
       if (subjectIds.length === 0) {
         return res.status(404).json({ error: 'No subjects found for the current semester' });
       }
-  
+    
       // Mendapatkan time-records berdasarkan daftar subjectId
       const timeRecords = await getTimeRecordsBySubjectIds(userId, subjectIds);
-  
+    
       res.status(200).json({ statusCode: '200', data: timeRecords });
     } catch (error) {
       console.error('Error fetching time records:', error);
@@ -438,19 +476,24 @@ async function getCurrentSemester(userId) {
       .get();
   
     const timeRecords = [];
-    timeRecordsSnapshot.forEach(doc => {
-      timeRecords.push({ id: doc.id, ...doc.data() });
+    const promises = timeRecordsSnapshot.docs.map(async (doc) => {
+      const record = { id: doc.id, ...doc.data() };
+      const time = await getTimeDifferenceInSeconds(record.startTime,record.endTime);
+      const color = await getColor(userId, record.subject);
+      const subjectName = await getSubjectNameById(userId, record.subject);
+      return { id: doc.id, ...record, color, subject: subjectName, time: time };
     });
   
-    return timeRecords;
+    return Promise.all(promises);
   }
+  
   
   // Route untuk mendapatkan time-records dari semester tertentu
 // Route untuk mendapatkan time-records dari semester tertentu atau semester berlangsung
 router.get('/users/:userId/time-records/semester/:semesterId?', async (req, res) => {
   try {
     const { userId, semesterId } = req.params;
-   
+
     // Jika semesterId null, dapatkan currentSemesterId
     const selectedSemesterId = semesterId || await getCurrentSemester(userId);
 

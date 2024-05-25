@@ -413,10 +413,11 @@ async function getCurrentSemester(userId) {
       const timeRecords = [];
       const promises = timeRecordsSnapshot.docs.map(async (doc) => {
         const data = doc.data();
+        const type = await getTimeRecordsType(data.type);
         const time = await getTimeDifferenceInSeconds(data.startTime,data.endTime);
         const color = await getColor(userId, data.subject);
         const subjectName = await getSubjectNameById(userId, data.subject);
-        return { id: doc.id, ...data, color, subject: subjectName, time: time };
+        return { id: doc.id, ...data, color, subject: subjectName, time: time, type:type };
       });
   
       const timeRecordsWithColor = await Promise.all(promises);
@@ -469,6 +470,14 @@ async function getCurrentSemester(userId) {
     return subjectIds;
   }
   
+  async function getTimeRecordsType(type){
+    if (type == 1){
+      return "Mengerjakan Tugas";
+    }
+    else if (type == 2){
+      return "Belajar Mandiri";
+    }
+  }
   // Fungsi untuk mendapatkan time-records berdasarkan daftar subjectId
   async function getTimeRecordsBySubjectIds(userId, subjectIds) {
     const timeRecordsSnapshot = await db.collection('users').doc(userId).collection('time_records')
@@ -478,10 +487,11 @@ async function getCurrentSemester(userId) {
     const timeRecords = [];
     const promises = timeRecordsSnapshot.docs.map(async (doc) => {
       const record = { id: doc.id, ...doc.data() };
+      const type = await getTimeRecordsType(record.type);
       const time = await getTimeDifferenceInSeconds(record.startTime,record.endTime);
       const color = await getColor(userId, record.subject);
       const subjectName = await getSubjectNameById(userId, record.subject);
-      return { id: doc.id, ...record, color, subject: subjectName, time: time };
+      return { id: doc.id, ...record, color, subject: subjectName, time: time, type:type };
     });
   
     return Promise.all(promises);

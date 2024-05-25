@@ -35,6 +35,14 @@ function formatDateTimeRaw(year, month, day, hours, minutes, second, millisecond
     return `${year}-${formattedMonth}-${formattedDay} ${hours}:${minutes}:${second}.${milliseconds}`;
   }
 
+  function formatDate(timestamp) {
+    const date = new Date(timestamp);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are zero-based
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
 async function getDaysInRange(startDate, endDate, day) {
     const days = [];
     let currentDate = new Date(startDate);
@@ -353,7 +361,7 @@ async function getCurrentSemester(userId) {
           endTime,
           subject,
           type,
-          date: Date.now() // Menambahkan kolom date dengan nilai Date.now()
+          date: formatDate(Date.now()) // Menambahkan kolom date dengan nilai Date.now()
         });
     
         res.status(201).json({ message: 'Time record added successfully', id: timeRecordRef.id });
@@ -442,7 +450,7 @@ async function getCurrentSemester(userId) {
 router.get('/users/:userId/time-records/semester/:semesterId?', async (req, res) => {
   try {
     const { userId, semesterId } = req.params;
-
+   
     // Jika semesterId null, dapatkan currentSemesterId
     const selectedSemesterId = semesterId || await getCurrentSemester(userId);
 
@@ -825,7 +833,7 @@ function getTime(dateTime) {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const secondsString = String(date.getSeconds()).padStart(2, '0');
     const millisecondsString = String(date.getMilliseconds()).padStart(3, '0');
-  
+    
     // Membuat string dengan format yang diinginkan
     return `${year}-${month}-${day} ${hours}:${minutes}:${secondsString}.${millisecondsString}`;
   }

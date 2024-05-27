@@ -19,11 +19,19 @@ git clone https://github.com/mdifal/KuliahKu-BE.git
 npm i
 ```
 ### 3. Sesuaikan IP dan port backend
+
+#### Jika aplikasi FE diajalankan pada external mobile device (bukan virtual device)
 - Buka command prompt
 - Berikan perintah berikut pada command prompt
 ```
 ipconfig
 ```
+- Command prompt akan menampilkan konfigurasi ip laptop
+- Copy value ipv4
+- Buka index.js pada project
+- Lalu ganti value konstanta host
+  ![image](https://github.com/mdifal/KuliahKu-BE/assets/86935367/903d95b6-b482-4ab1-8eaa-a1bac7fd5f66)
+
 ### 4. Jalankan aplikasi
 ```
 npm start

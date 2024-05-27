@@ -27,6 +27,28 @@ const allRoute = require('./routes/allRoute');
 // const authController = require('./controllers/authController');
 // const userController = require('./controllers/userController');
 
+
+var io = require("socket.io")(server);
+
+//middlewre
+app.use(express.json());
+var clients = {};
+
+io.on("connection", (socket) => {
+  console.log("connetetd");
+  console.log(socket.id, "has joined");
+  socket.on("signin", (id) => {
+    console.log(id);
+    clients[id] = socket;
+    console.log(clients);
+  });
+  socket.on("message", (msg) => {
+    console.log(msg);
+    let targetId = msg.targetId;
+    if (clients[targetId]) clients[targetId].emit("message", msg);
+  });
+});
+
 // Gunakan rute yang diimpor
 app.use('/', allRoute);
 
@@ -38,7 +60,7 @@ app.use('/', allRoute);
   server.listen(8000,'127.0.0.1',function(){
     server.close(function(){
       server.listen(8001, host)
-      console.log(`Ini keterangan server dah jalan, agar kita khususnya fauza tidak ngahuleng`);
+      console.log(`Server sudah jalan`);
     })
    })
 

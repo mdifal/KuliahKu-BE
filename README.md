@@ -4,4 +4,8 @@
 ini merupakan repository backend aplikasi Kuliahku
 
 ## Teknologi
-* NodeJS : ExpressJS
+* NodeJS
+
+## How to start
+### 1. Clone Repository
+

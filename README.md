@@ -8,4 +8,5 @@ ini merupakan repository backend aplikasi Kuliahku
 
 ## How to start
 ### 1. Clone Repository
+```git clone https://github.com/mdifal/KuliahKu-BE.git```
 

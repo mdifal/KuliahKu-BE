@@ -19,8 +19,8 @@ git clone https://github.com/mdifal/KuliahKu-BE.git
 npm i
 ```
 ### 3. Sesuaikan IP dan port backend
-a. Buka command prompt\n
-b. Berikan perintah
+- Buka command prompt
+- Berikan perintah berikut pada command prompt
 ```
 ipconfig
 ```

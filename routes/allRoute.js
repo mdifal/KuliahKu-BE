@@ -1000,7 +1000,7 @@ function getTime(dateTime) {
       // Mendapatkan tanggal dan waktu yang diformat
       const formattedDateTimeReminder = formatDateTime(data.dateTimeReminder);
       const formattedDateTimeDeadline = formatDateTime(data.dateTimeDeadline);
-      const type = await getTimeRecordsType(userId,data.type);
+      const type = await getTimeRecordsType(data.type);
       const subject = await getSubjectNameById(userId, data.subjectId);
       const semester = await getSemesterNumberById(userId, data.semesterId);
       // Menyusun respons dengan seluruh data rencana mandiri, termasuk warna dan tanggal serta waktu yang diformat

@@ -917,13 +917,13 @@ function getTime(dateTime) {
   router.get('/users/:userId/rencanaMandiri/', async (req, res) => {
     try {
       const { userId } = req.params;
-      
+      console.log("HOHOHO");
       const currentSemesterId = await getCurrentSemester(userId);
   
       if (!currentSemesterId) {
         return res.status(400).json({ error: 'No current semester found' });
       }
-  
+      
       const rencanaMandiriList = await getRencanaMandiri(userId, currentSemesterId);
   
       res.status(200).json({ statusCode: '200', data: rencanaMandiriList });
@@ -952,12 +952,36 @@ function getTime(dateTime) {
       res.status(500).json({ error: 'Failed to fetch rencana mandiri' });
     }
   });
+
+  async function getSemesterNumberById(userId, semesterId) {
+    try {
+      // Referensi ke koleksi semester di dalam dokumen user
+      const semesterRef = db.collection('users').doc(userId).collection('semesters').doc(semesterId);
+      
+      // Mendapatkan dokumen semester
+      const semesterDoc = await semesterRef.get();
+    
+      // Periksa apakah dokumen ada
+      if (!semesterDoc.exists) {
+        console.log('No such document!');
+        return null;
+      } else {
+        // Mengembalikan nilai semesterNumber
+        const data = semesterDoc.data();
+        return data.semesterNumber;
+      }
+    } catch (error) {
+      console.error('Error getting document:', error);
+      return null;
+    }
+  }
   
   //Get Rencana Detail
   router.get('/users/:userId/rencanaMandiri/:rencanaMandiriId', async (req, res) => {
     try {
-      const { userId, rencanaMandiriId } = req.params;
       
+      const { userId, rencanaMandiriId } = req.params;
+      console.log("HOHOHO");
       // Mendapatkan data rencana mandiri berdasarkan userId dan rencanaMandiriId
       const rencanaMandiriDoc = await db.collection('users').doc(userId).collection('rencanaMandiri').doc(rencanaMandiriId).get();
       
@@ -968,6 +992,7 @@ function getTime(dateTime) {
   
       // Mendapatkan data rencana mandiri
       const data = rencanaMandiriDoc.data();
+      console.log(data);
       
       // Mendapatkan warna dari mata kuliah
       const color = await getColor(userId, data.subjectId);
@@ -975,14 +1000,16 @@ function getTime(dateTime) {
       // Mendapatkan tanggal dan waktu yang diformat
       const formattedDateTimeReminder = formatDateTime(data.dateTimeReminder);
       const formattedDateTimeDeadline = formatDateTime(data.dateTimeDeadline);
-  
+      const type = await getTimeRecordsType(userId,data.type);
+      const subject = await getSubjectNameById(userId, data.subjectId);
+      const semester = await getSemesterNumberById(userId, data.semesterId);
       // Menyusun respons dengan seluruh data rencana mandiri, termasuk warna dan tanggal serta waktu yang diformat
       const responseData = {
         id: rencanaMandiriDoc.id,
         title: data.title,
-        type: data.type,
-        subjectId: data.subjectId,
-        semesterId: data.semesterId,
+        type: type,
+        subjectId: subject,
+        semesterId: semester,
         dateTimeReminder: formattedDateTimeReminder,
         dateTimeDeadline: formattedDateTimeDeadline,
         notes: data.notes,

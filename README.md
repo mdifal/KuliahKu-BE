@@ -30,7 +30,7 @@ ipconfig
 - Copy value ipv4
 - Buka index.js pada project
 - Lalu ganti value konstanta host dengan value dari ipv4 yang dimiliki
-- ![image](https://github.com/mdifal/KuliahKu-BE/assets/86935367/903d95b6-b482-4ab1-8eaa-a1bac7fd5f66)
+![image](https://github.com/mdifal/KuliahKu-BE/assets/86935367/903d95b6-b482-4ab1-8eaa-a1bac7fd5f66)
 
 ### 4. Jalankan aplikasi
 ```

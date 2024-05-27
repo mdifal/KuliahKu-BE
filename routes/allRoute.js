@@ -361,6 +361,7 @@ async function getCurrentSemester(userId) {
           endTime,
           subject,
           type,
+          title,
           date: formatDate(Date.now()) // Menambahkan kolom date dengan nilai Date.now()
         });
     

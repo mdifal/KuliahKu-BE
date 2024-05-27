@@ -18,7 +18,12 @@ git clone https://github.com/mdifal/KuliahKu-BE.git
 ```
 npm i
 ```
-### 3. Sesuaikan IP dan port backend sesuai dengan yang dibutuhkan FE
+### 3. Sesuaikan IP dan port backend
+#### a. Buka command prompt
+#### b. Berikan perintah
+```
+ipconfig
+```
 ### 4. Jalankan aplikasi
 ```
 npm start

@@ -534,7 +534,7 @@ router.get('/users/:userId/time-records/semester/:semesterId?', async (req, res)
   router.post('/users/:userId/jadwalKuliah', async (req, res) => {
     try {
       const { userId } = req.params;
-      const { subject, dosen,ruang, day, startTime, endTime, color } = req.body;
+      const { subject,sks, dosen,ruang, day, startTime, endTime, color } = req.body;
       
       // Mendapatkan ID semester berlangsung
       const currentSemesterId = await getCurrentSemester(userId);
@@ -549,6 +549,7 @@ router.get('/users/:userId/time-records/semester/:semesterId?', async (req, res)
       const scheduleRef = await db.collection('users').doc(userId).collection('schedules').add({
         semesterId: currentSemesterId,
         subject,
+        sks,
         dosen,
         ruang,
         day,

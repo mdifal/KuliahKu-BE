@@ -1123,6 +1123,56 @@ router.delete('/users/:userId/rencanaMandiri/delete/:rencanaMandiriId', async (r
     }
 });
 
+router.post('/groups', async (req, res) => {
+  try {
+      const { groupName, participants } = req.body;
+      const groupRef = await db.collection('groups').add({
+          groupName,
+          participants
+      });
+      res.status(201).send({ id: groupRef.id });
+  } catch (error) {
+      res.status(400).send(error.message);
+  }
+});
+
+router.get('/groups/:id', async (req, res) => {
+  try {
+      const groupId = req.params.id;
+      const groupDoc = await db.collection('groups').doc(groupId).get();
+      if (!groupDoc.exists) {
+          res.status(404).send('Group not found');
+      } else {
+          res.send(groupDoc.data());
+      }
+  } catch (error) {
+      res.status(400).send(error.message);
+  }
+});
+
+router.put('/groups/:id', async (req, res) => {
+  try {
+      const groupId = req.params.id;
+      const { groupName, participants } = req.body;
+      await db.collection('groups').doc(groupId).update({
+          groupName,
+          participants
+      });
+      res.send('Group updated');
+  } catch (error) {
+      res.status(400).send(error.message);
+  }
+});
+
+router.delete('/groups/:id', async (req, res) => {
+  try {
+      const groupId = req.params.id;
+      await db.collection('groups').doc(groupId).delete();
+      res.send('Group deleted');
+  } catch (error) {
+      res.status(400).send(error.message);
+  }
+});
 
 
 module.exports = router;

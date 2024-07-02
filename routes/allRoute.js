@@ -5,10 +5,10 @@ const jwt = require('jsonwebtoken');
 const http = require('http')
 const cors = require('cors');
 const firebase = require("firebase/app");
-
+const path = require('path');
 const express = require('express');
 const router = express.Router();
-
+const fsExtra = require('fs-extra');
 const db = fs.firestore();
 
 const secretKey = 'secret';
@@ -22,7 +22,22 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + '-' + file.originalname);
   },
 });
+
+const groupPicture = multer.diskStorage({
+  destination: function (req, file, cb) {
+      const groupId = req.groupId;
+      const uploadPath = path.join(__dirname,'..', 'uploads', 'group', groupId, 'profilPic');
+      fsExtra.ensureDirSync(uploadPath);
+      cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+      cb(null, 'picture' + path.extname(file.originalname));
+  }
+});
+
 const upload = multer({ storage: storage });
+
+const uploadGroupProfil = multer({ storage: groupPicture });
 
 // Rute untuk login
 
@@ -1123,14 +1138,37 @@ router.delete('/users/:userId/rencanaMandiri/delete/:rencanaMandiriId', async (r
     }
 });
 
-router.post('/groups', async (req, res) => {
+router.post('/groups/:userId', async (req, res, next) => {
   try {
       const { groupName, participants } = req.body;
+      console.log(groupName)
+      const userId = req.params.userId;
+
+      // Tambahkan data grup ke Firestore
       const groupRef = await db.collection('groups').add({
           groupName,
-          participants
+          participants,
+          createdBy: userId,
+          createdAt: new Date(),
+          picture: '' // Placeholder for the picture URL
       });
-      res.status(201).send({ id: groupRef.id });
+
+      req.groupId = groupRef.id; // Set groupId for multer storage
+      next();
+  } catch (error) {
+      res.status(400).send(error.message);
+  }
+}, uploadGroupProfil.single('picture'), async (req, res) => {
+  try {
+      const groupId = req.groupId;
+      const picturePath = req.file ? path.join('..','uploads', 'group', groupId, 'profilPic', req.file.filename) : '';
+
+      // Update the group document with the picture path
+      await db.collection('groups').doc(groupId).update({
+          picture: picturePath
+      });
+
+      res.status(201).send({ id: groupId });
   } catch (error) {
       res.status(400).send(error.message);
   }
@@ -1150,14 +1188,42 @@ router.get('/groups/:id', async (req, res) => {
   }
 });
 
-router.put('/groups/:id', async (req, res) => {
+
+const groupPictureUpdate = multer.diskStorage({
+  destination: function (req, file, cb) {
+      const groupId = req.params.id;
+      const uploadPath = path.join(__dirname, '..', 'uploads', 'group', groupId, 'profilPic');
+      fsExtra.ensureDirSync(uploadPath);
+      cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+      cb(null, 'picture' + path.extname(file.originalname));
+  }
+});
+
+const uploadGroupProfilUpdate = multer({ storage: groupPictureUpdate });
+
+router.put('/groups/:id', uploadGroupProfilUpdate.single('picture'), async (req, res) => {
   try {
       const groupId = req.params.id;
       const { groupName, participants } = req.body;
-      await db.collection('groups').doc(groupId).update({
-          groupName,
-          participants
-      });
+      const updateData = {};
+
+      if (groupName !== undefined) {
+          updateData.groupName = groupName;
+      }
+
+      if (participants !== undefined) {
+          updateData.participants = participants;
+      }
+
+      if (req.file) {
+          const picturePath = path.join('..', 'uploads', 'group', groupId, 'profilPic', req.file.filename);
+          updateData.picture = picturePath;
+      }
+
+      await db.collection('groups').doc(groupId).update(updateData);
+
       res.send('Group updated');
   } catch (error) {
       res.status(400).send(error.message);

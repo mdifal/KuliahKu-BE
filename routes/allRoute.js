@@ -1138,16 +1138,16 @@ router.delete('/users/:userId/rencanaMandiri/delete/:rencanaMandiriId', async (r
     }
 });
 
-//buat group
 router.post('/groups/:userId', async (req, res, next) => {
   try {
       const { groupName, participants } = req.body;
       const userId = req.params.userId;
       const participantsWithCreator = Array.isArray(participants) ? [...participants, userId] : [userId];
+      
       // Tambahkan data grup ke Firestore
       const groupRef = await db.collection('groups').add({
           groupName,
-          participants : participantsWithCreator,
+          participants: participantsWithCreator,
           createdBy: userId,
           createdAt: new Date(),
           picture: '' // Placeholder for the picture URL
@@ -1167,7 +1167,10 @@ router.post('/groups/:userId', async (req, res, next) => {
   } catch (error) {
       res.status(400).send(error.message);
   }
-}, uploadGroupProfil.single('picture'), async (req, res) => {
+}, async (req, res, next) => {
+  if (!req.file) return next(); // Jika tidak ada file, lanjutkan ke middleware berikutnya
+  uploadGroupProfil.single('picture')(req, res, next);
+}, async (req, res) => {
   try {
       const groupId = req.groupId;
       const picturePath = req.file ? path.join('..', 'uploads', 'group', groupId, 'profilPic', req.file.filename) : '';
@@ -1182,7 +1185,6 @@ router.post('/groups/:userId', async (req, res, next) => {
       res.status(400).send(error.message);
   }
 });
-
 
 //get data specific group
 router.get('/groups/:id', async (req, res) => {

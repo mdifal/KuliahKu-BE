@@ -1138,22 +1138,31 @@ router.delete('/users/:userId/rencanaMandiri/delete/:rencanaMandiriId', async (r
     }
 });
 
+//buat group
 router.post('/groups/:userId', async (req, res, next) => {
   try {
       const { groupName, participants } = req.body;
-      console.log(groupName)
       const userId = req.params.userId;
-
+      const participantsWithCreator = Array.isArray(participants) ? [...participants, userId] : [userId];
       // Tambahkan data grup ke Firestore
       const groupRef = await db.collection('groups').add({
           groupName,
-          participants,
+          participants : participantsWithCreator,
           createdBy: userId,
           createdAt: new Date(),
           picture: '' // Placeholder for the picture URL
       });
 
       req.groupId = groupRef.id; // Set groupId for multer storage
+
+      // Tambahkan groupId ke listGroup tiap participant
+      const batch = db.batch();
+      participantsWithCreator.forEach(participantId => {
+          const userRef = db.collection('users').doc(participantId).collection('listGroup').doc(groupRef.id);
+          batch.set(userRef, { groupId: groupRef.id });
+      });
+      await batch.commit();
+
       next();
   } catch (error) {
       res.status(400).send(error.message);
@@ -1161,7 +1170,7 @@ router.post('/groups/:userId', async (req, res, next) => {
 }, uploadGroupProfil.single('picture'), async (req, res) => {
   try {
       const groupId = req.groupId;
-      const picturePath = req.file ? path.join('..','uploads', 'group', groupId, 'profilPic', req.file.filename) : '';
+      const picturePath = req.file ? path.join('..', 'uploads', 'group', groupId, 'profilPic', req.file.filename) : '';
 
       // Update the group document with the picture path
       await db.collection('groups').doc(groupId).update({
@@ -1174,6 +1183,8 @@ router.post('/groups/:userId', async (req, res, next) => {
   }
 });
 
+
+//get data specific group
 router.get('/groups/:id', async (req, res) => {
   try {
       const groupId = req.params.id;
@@ -1188,7 +1199,7 @@ router.get('/groups/:id', async (req, res) => {
   }
 });
 
-
+// Multer configuration for PUT request
 const groupPictureUpdate = multer.diskStorage({
   destination: function (req, file, cb) {
       const groupId = req.params.id;
@@ -1202,7 +1213,7 @@ const groupPictureUpdate = multer.diskStorage({
 });
 
 const uploadGroupProfilUpdate = multer({ storage: groupPictureUpdate });
-
+//edit group
 router.put('/groups/:id', uploadGroupProfilUpdate.single('picture'), async (req, res) => {
   try {
       const groupId = req.params.id;
@@ -1215,6 +1226,31 @@ router.put('/groups/:id', uploadGroupProfilUpdate.single('picture'), async (req,
 
       if (participants !== undefined) {
           updateData.participants = participants;
+
+          // Fetch the current group document
+          const groupDoc = await db.collection('groups').doc(groupId).get();
+          const currentParticipants = groupDoc.data().participants || [];
+
+          // Find removed participants
+          const removedParticipants = currentParticipants.filter(participant => !participants.includes(participant));
+          // Find added participants
+          const addedParticipants = participants.filter(participant => !currentParticipants.includes(participant));
+
+          const batch = db.batch();
+
+          // Remove groupId from removed participants' listGroup
+          removedParticipants.forEach(participantId => {
+              const userRef = db.collection('users').doc(participantId).collection('listGroup').doc(groupId);
+              batch.delete(userRef);
+          });
+
+          // Add groupId to added participants' listGroup
+          addedParticipants.forEach(participantId => {
+              const userRef = db.collection('users').doc(participantId).collection('listGroup').doc(groupId);
+              batch.set(userRef, { groupId: groupId });
+          });
+
+          await batch.commit();
       }
 
       if (req.file) {
@@ -1230,9 +1266,26 @@ router.put('/groups/:id', uploadGroupProfilUpdate.single('picture'), async (req,
   }
 });
 
+
+//hapus group
 router.delete('/groups/:id', async (req, res) => {
   try {
       const groupId = req.params.id;
+
+      // Fetch the current group document
+      const groupDoc = await db.collection('groups').doc(groupId).get();
+      const participants = groupDoc.data().participants || [];
+
+      const batch = db.batch();
+
+      // Remove groupId from participants' listGroup
+      participants.forEach(participantId => {
+          const userRef = db.collection('users').doc(participantId).collection('listGroup').doc(groupId);
+          batch.delete(userRef);
+      });
+
+      await batch.commit();
+
       await db.collection('groups').doc(groupId).delete();
       res.send('Group deleted');
   } catch (error) {
@@ -1240,5 +1293,30 @@ router.delete('/groups/:id', async (req, res) => {
   }
 });
 
+
+//get data all group user tertentu
+router.get('/users/:userId/groups', async (req, res) => {
+  try {
+      const userId = req.params.userId;
+      
+      // Ambil listGroup dari dokumen user
+      const listGroupSnapshot = await db.collection('users').doc(userId).collection('listGroup').get();
+      if (listGroupSnapshot.empty) {
+          return res.status(404).send('No groups found for this user');
+      }
+      
+      const groupIds = listGroupSnapshot.docs.map(doc => doc.id);
+      
+      // Ambil data grup berdasarkan groupIds
+      const groupPromises = groupIds.map(groupId => db.collection('groups').doc(groupId).get());
+      const groupDocs = await Promise.all(groupPromises);
+      
+      const groups = groupDocs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      res.send(groups);
+  } catch (error) {
+      res.status(400).send(error.message);
+  }
+});
 
 module.exports = router;

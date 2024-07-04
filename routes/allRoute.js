@@ -1319,4 +1319,28 @@ router.get('/users/:userId/groups', async (req, res) => {
   }
 });
 
+
+router.get('/users/search', async (req, res) => {
+  try {
+      const email = req.query.email;
+      if (!email) {
+          return res.status(400).send('Email query parameter is required');
+      }
+
+      const userSnapshot = await db.collection('users')
+        .orderBy('email')
+        .startAt(email)
+        .endAt(email + '\uf8ff')
+        .get();
+
+      if (userSnapshot.empty) {
+          return res.status(404).send('User not found');
+      }
+
+      const userData = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      res.send(userData);
+  } catch (error) {
+      res.status(400).send(error.message);
+  }
+});
 module.exports = router;

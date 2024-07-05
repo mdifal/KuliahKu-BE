@@ -35,20 +35,65 @@ app.use(express.json());
 var clients = {};
 
 io.on("connection", (socket) => {
-  console.log("connetetd");
+  console.log("connected");
   console.log(socket.id, "has joined");
+
   socket.on("signin", (id) => {
     console.log(id);
     clients[id] = socket;
     console.log(clients);
   });
-  socket.on("message", (msg) => {
-    console.log(msg);
-    let targetId = msg.targetId;
-    if (clients[targetId]) clients[targetId].emit("message", msg);
-  });
-});
 
+  socket.on("chat", async (msg) => {
+    console.log(msg);
+    const { senderId, targetId, content, groupId } = msg;
+
+    if (groupId) {
+      // Chat grup
+      const groupChatRef = await db.collection('groups').doc(groupId).collection('chats').add({
+        senderId,
+        content,
+        timestamp: new Date()
+      });
+      io.to(groupId).emit("message", {
+        senderId,
+        content,
+        timestamp: new Date(),
+        groupId
+      });
+    } else {
+      // Chat pribadi
+      const privateChatRef = await db.collection('privateChats').add({
+        participants: [senderId, targetId].sort(),
+        senderId,
+        content,
+        timestamp: new Date()
+      });
+      if (clients[targetId]) {
+        clients[targetId].emit("message", {
+          senderId,
+          content,
+          timestamp: new Date()
+        });
+      }
+    }
+  });
+
+  socket.on("joinGroup", (groupId) => {
+    socket.join(groupId);
+  });
+
+  socket.on("disconnect", () => {
+    // Clean up when a client disconnects
+    for (let id in clients) {
+      if (clients[id] === socket) {
+        delete clients[id];
+        break;
+      }
+    }
+    console.log(socket.id, "has left");
+  });
+});+
 // Gunakan rute yang diimpor
 app.use('/', allRoute);
 

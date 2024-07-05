@@ -11,6 +11,9 @@ const router = express.Router();
 const fsExtra = require('fs-extra');
 const db = fs.firestore();
 
+router.use(express.urlencoded({ extended: true }));
+router.use(express.json());
+
 const secretKey = 'secret';
 const multer = require('multer');
 
@@ -1345,4 +1348,6 @@ router.get('/users/search', async (req, res) => {
       res.status(400).send(error.message);
   }
 });
+
+
 module.exports = router;

@@ -1221,9 +1221,18 @@ router.post('/groups/:userId/data', async (req, res) => {
 });
 
 
-router.post('/groups/:groupId/picture', uploadGroupProfil.single('picture'), async (req, res) => {
+
+const setGroupId = (req, res, next) => {
+  req.groupId = req.params.groupId;
+  next();
+};
+
+
+router.post('/groups/:groupId/picture',setGroupId, uploadGroupProfil.single('picture'), async (req, res) => {
   try {
     const groupId = req.params.groupId;
+    console.log(groupId);
+    console.log(req.file.filename);
     const picturePath = req.file ? path.join('..', 'uploads', 'group', groupId, 'profilPic', req.file.filename) : '';
 
     // Update the group document with the picture path

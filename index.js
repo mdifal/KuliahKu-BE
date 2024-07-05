@@ -15,6 +15,7 @@ const app = express();
 app.use(cors());
 const server = http.createServer(app)
 app.use(express.json());
+
 const db = fs.firestore();
 
 const secretKey = 'secret'; // Ganti dengan kunci rahasia yang lebih kuat dalam produksi

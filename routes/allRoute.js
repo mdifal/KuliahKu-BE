@@ -1143,6 +1143,7 @@ router.delete('/users/:userId/rencanaMandiri/delete/:rencanaMandiriId', async (r
 
 router.post('/groups/:userId', async (req, res, next) => {
   try {
+    console.log(req.body);
       const { groupName, participants } = req.body;
       const userId = req.params.userId;
       const participantsWithCreator = Array.isArray(participants) ? [...participants, userId] : [userId];
@@ -1186,6 +1187,53 @@ router.post('/groups/:userId', async (req, res, next) => {
       res.status(201).send({ id: groupId });
   } catch (error) {
       res.status(400).send(error.message);
+  }
+});
+
+router.post('/groups/:userId/data', async (req, res) => {
+  try {
+    console.log(req.body);
+    const { groupName, participants } = req.body;
+    const userId = req.params.userId;
+    const participantsWithCreator = Array.isArray(participants) ? [...participants, userId] : [userId];
+
+    // Tambahkan data grup ke Firestore
+    const groupRef = await db.collection('groups').add({
+      groupName,
+      participants: participantsWithCreator,
+      createdBy: userId,
+      createdAt: new Date(),
+      picture: '' // Placeholder for the picture URL
+    });
+
+    // Tambahkan groupId ke listGroup tiap participant
+    const batch = db.batch();
+    participantsWithCreator.forEach(participantId => {
+      const userRef = db.collection('users').doc(participantId).collection('listGroup').doc(groupRef.id);
+      batch.set(userRef, { groupId: groupRef.id });
+    });
+    await batch.commit();
+
+    res.status(201).send({ id: groupRef.id });
+  } catch (error) {
+    res.status(400).send(error.message);
+  }
+});
+
+
+router.post('/groups/:groupId/picture', uploadGroupProfil.single('picture'), async (req, res) => {
+  try {
+    const groupId = req.params.groupId;
+    const picturePath = req.file ? path.join('..', 'uploads', 'group', groupId, 'profilPic', req.file.filename) : '';
+
+    // Update the group document with the picture path
+    await db.collection('groups').doc(groupId).update({
+      picture: picturePath
+    });
+
+    res.status(200).send({ message: 'Picture uploaded successfully' });
+  } catch (error) {
+    res.status(400).send(error.message);
   }
 });
 

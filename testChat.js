@@ -12,11 +12,11 @@ socket1.on('connect', () => {
     console.log('User 1 received:', data);
   });
 
-  socket1.emit('chat', {
-    senderId: 'rawr@email.com',
-    targetId: 'nisrinawafaz@gmail.com',
-    content: 'Hello Nisrina!'
-  });
+//   socket1.emit('chat', {
+//     senderId: 'rawr@email.com',
+//     targetId: 'nisrinawafaz@gmail.com',
+//     content: 'Hello Nisrina!'
+//   });
 });
 
 socket2.on('connect', () => {
@@ -28,11 +28,11 @@ socket2.on('connect', () => {
   });
 
   // Mengirim pesan pribadi dari User 2 ke User 1
-//   socket2.emit('chat', {
-//     senderId: 'nisrinawafaz@gmail.com',
-//     targetId: 'rawr@email.com',
-//     content: 'Hello User 1!'
-//   });
+  socket2.emit('chat', {
+    senderId: 'nisrinawafaz@gmail.com',
+    targetId: 'contoh@email.com',
+    content: 'Hello User 1!'
+  });
 });
 
 socket3.on('connect', () => {

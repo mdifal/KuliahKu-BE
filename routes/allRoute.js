@@ -1423,4 +1423,97 @@ router.get('/users/search', async (req, res) => {
 });
 
 
+
+const getUserChats = async (userId) => {
+  try {
+    // Mengambil roomChat dari users -> collection roomChats
+    const roomChatRef = db.collection('users').doc(userId).collection('roomChats');
+    const roomChatSnapshot = await roomChatRef.get();
+    const privateChats = [];
+
+    roomChatSnapshot.forEach(doc => {
+      privateChats.push({
+        roomId: doc.id,
+        targetId: doc.data().targetId
+      });
+    });
+
+    // Mengambil groupChat dari users -> listGroup dan cek apakah grup tersebut memiliki chat
+    const listGroupRef = db.collection('users').doc(userId).collection('listGroup');
+    const listGroupSnapshot = await listGroupRef.get();
+    const groupChats = [];
+
+    for (const groupDoc of listGroupSnapshot.docs) {
+      const groupId = groupDoc.id;
+      const chatsRef = db.collection('groups').doc(groupId).collection('chats');
+      const chatSnapshot = await chatsRef.limit(1).get();
+
+      if (!chatSnapshot.empty) {
+        groupChats.push({
+          groupId: groupId,
+          groupName: (await db.collection('groups').doc(groupId).get()).data().groupName
+        });
+      }
+    }
+
+    return {
+      privateChats,
+      groupChats
+    };
+  } catch (error) {
+    throw new Error(`Failed to get user chats: ${error.message}`);
+  }
+};
+
+// Route untuk mendapatkan roomChats dan groupChats pengguna
+router.get('/users/:userId/roomchat', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const chats = await getUserChats(userId);
+    res.status(200).send(chats);
+  } catch (error) {
+    res.status(400).send(error.message);
+  }
+});
+
+router.get('/groups/:groupId/chats', async (req, res) => {
+  try {
+    const groupId = req.params.groupId;
+    const chatsRef = db.collection('groups').doc(groupId).collection('chats');
+    const chatSnapshot = await chatsRef.orderBy('timestamp').get();
+    const chats = [];
+
+    chatSnapshot.forEach(doc => {
+      chats.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+
+    res.status(200).send(chats);
+  } catch (error) {
+    res.status(400).send(error.message);
+  }
+});
+
+router.get('/privateChats/:roomId/chats', async (req, res) => {
+  try {
+    const roomId = req.params.roomId;
+    const chatsRef = db.collection('privateChats').doc(roomId).collection('messages');
+    const chatSnapshot = await chatsRef.orderBy('timestamp').get();
+    const chats = [];
+
+    chatSnapshot.forEach(doc => {
+      chats.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+
+    res.status(200).send(chats);
+  } catch (error) {
+    res.status(400).send(error.message);
+  }
+});
+
 module.exports = router;

@@ -29,11 +29,11 @@ const allRoute = require('./routes/allRoute');
 // const userController = require('./controllers/userController');
 
 
-var io = require("socket.io")(server);
+
 
 //middlewre
 app.use(express.json());
-
+const io = require('socket.io')(server);
 const clients = {};
 
 io.on("connection", (socket) => {
@@ -77,25 +77,50 @@ io.on("connection", (socket) => {
       }
     } else {
       // Chat pribadi
-      const privateChatRef = await db.collection('privateChats').add({
-        participants: [senderId, targetId].sort(),
+      let roomId;
+      const senderRoomChatRef = db.collection('users').doc(senderId).collection('roomChats');
+      const targetRoomChatRef = db.collection('users').doc(targetId).collection('roomChats');
+      
+      // Check if room chat already exists
+      const senderRoomChats = await senderRoomChatRef.where('targetId', '==', targetId).limit(1).get();
+      if (!senderRoomChats.empty) {
+        roomId = senderRoomChats.docs[0].id;
+      } else {
+        // Create new room chat
+        const newRoomRef = await db.collection('privateChats').add({
+          participants: [senderId, targetId].sort(),
+          createdAt: new Date()
+        });
+        roomId = newRoomRef.id;
+
+        // Add roomId to users' roomChats
+        await senderRoomChatRef.doc(roomId).set({ roomId, targetId });
+        await targetRoomChatRef.doc(roomId).set({ roomId, targetId: senderId });
+      }
+
+      // Add message to room chat
+      const timestamp = new Date().toISOString();
+      await db.collection('privateChats').doc(roomId).collection('messages').doc(timestamp).set({
         senderId,
         content,
-        timestamp: new Date()
+        timestamp
       });
+
+      // Emit message to sender and receiver
       if (clients[targetId]) {
         clients[targetId].emit("message", {
           senderId,
           content,
-          timestamp: new Date()
+          timestamp,
+          roomId
         });
       }
-      // Juga kirimkan pesan ke pengirim
       if (clients[senderId]) {
         clients[senderId].emit("message", {
           senderId,
           content,
-          timestamp: new Date()
+          timestamp,
+          roomId
         });
       }
     }
@@ -116,6 +141,8 @@ io.on("connection", (socket) => {
     console.log(socket.id, "has left");
   });
 });
+
+
 
 app.use('/', allRoute);
 

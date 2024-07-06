@@ -11,6 +11,12 @@ socket1.on('connect', () => {
   socket1.on('message', (data) => {
     console.log('User 1 received:', data);
   });
+
+  socket1.emit('chat', {
+    senderId: 'rawr@email.com',
+    targetId: 'nisrinawafaz@gmail.com',
+    content: 'Hello Nisrina!'
+  });
 });
 
 socket2.on('connect', () => {
@@ -22,11 +28,11 @@ socket2.on('connect', () => {
   });
 
   // Mengirim pesan pribadi dari User 2 ke User 1
-  socket2.emit('chat', {
-    senderId: 'nisrinawafaz@gmail.com',
-    targetId: 'rawr@email.com',
-    content: 'Hello User 1!'
-  });
+//   socket2.emit('chat', {
+//     senderId: 'nisrinawafaz@gmail.com',
+//     targetId: 'rawr@email.com',
+//     content: 'Hello User 1!'
+//   });
 });
 
 socket3.on('connect', () => {
@@ -38,9 +44,11 @@ socket3.on('connect', () => {
     });
   
     // Mengirim pesan pribadi dari User 2 ke User 1
-    socket3.emit('chat', {
-      senderId: 'contoh@email.com',
-      groupId: 'uCJPfn21rzZMUqUGZZ3z',
-      content: 'Hello User Group!'
-    });
+    // socket3.emit('chat', {
+    //   senderId: 'contoh@email.com',
+    //   groupId: 'uCJPfn21rzZMUqUGZZ3z',
+    //   content: 'Hello User Group!'
+    // });
+
+    
   });

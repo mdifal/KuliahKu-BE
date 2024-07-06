@@ -1141,52 +1141,71 @@ router.delete('/users/:userId/rencanaMandiri/delete/:rencanaMandiriId', async (r
     }
 });
 
-router.post('/groups/:userId', async (req, res, next) => {
+const generateGroup = async (req, res, next) => {
   try {
-    console.log(req.body);
-      const { groupName, participants } = req.body;
-      const userId = req.params.userId;
-      const participantsWithCreator = Array.isArray(participants) ? [...participants, userId] : [userId];
-      
-      // Tambahkan data grup ke Firestore
-      const groupRef = await db.collection('groups').add({
-          groupName,
-          participants: participantsWithCreator,
-          createdBy: userId,
-          createdAt: new Date(),
-          picture: '' // Placeholder for the picture URL
-      });
+    // Tambahkan grup baru ke Firestore dengan data minimal
+    const groupRef = await db.collection('groups').add({
+      groupName: "",
+      participants: [],
+      createdBy: "",
+      createdAt: new Date(),
+      picture: "" // Placeholder for the picture URL
+    });
 
-      req.groupId = groupRef.id; // Set groupId for multer storage
-
-      // Tambahkan groupId ke listGroup tiap participant
-      const batch = db.batch();
-      participantsWithCreator.forEach(participantId => {
-          const userRef = db.collection('users').doc(participantId).collection('listGroup').doc(groupRef.id);
-          batch.set(userRef, { groupId: groupRef.id });
-      });
-      await batch.commit();
-
-      next();
+    req.groupId = groupRef.id; // Set groupId for multer storage
+    next();
   } catch (error) {
-      res.status(400).send(error.message);
+    res.status(400).send(error.message);
   }
-}, async (req, res, next) => {
-  if (!req.file) return next(); // Jika tidak ada file, lanjutkan ke middleware berikutnya
-  uploadGroupProfil.single('picture')(req, res, next);
+};
+
+const setGroupId = (req, res, next) => {
+  req.groupId = req.groupId || req.params.groupId;
+  next();
+};
+
+
+router.post('/groups/:userId', generateGroup, setGroupId, uploadGroupProfil.single('picture'), async (req, res, next) => {
+  try {
+    const { groupName, participants } = req.body;
+    const userId = req.params.userId;
+    const participantsWithCreator = Array.isArray(participants) ? [...participants, userId] : [userId];
+    const groupId = req.groupId;
+
+    // Tambahkan data grup ke Firestore
+    await db.collection('groups').doc(groupId).set({
+      groupName,
+      participants: participantsWithCreator,
+      createdBy: userId,
+      createdAt: new Date(),
+      picture: "" // Placeholder for the picture URL
+    });
+
+    // Tambahkan groupId ke listGroup tiap participant
+    const batch = db.batch();
+    participantsWithCreator.forEach(participantId => {
+      const userRef = db.collection('users').doc(participantId).collection('listGroup').doc(groupId);
+      batch.set(userRef, { groupId: groupId });
+    });
+    await batch.commit();
+
+    next();
+  } catch (error) {
+    res.status(400).send(error.message);
+  }
 }, async (req, res) => {
   try {
-      const groupId = req.groupId;
-      const picturePath = req.file ? path.join('..', 'uploads', 'group', groupId, 'profilPic', req.file.filename) : '';
+    const groupId = req.groupId;
+    const picturePath = req.file ? path.join('..', 'uploads', 'group', groupId, 'profilPic', req.file.filename) : '';
 
-      // Update the group document with the picture path
-      await db.collection('groups').doc(groupId).update({
-          picture: picturePath
-      });
+    // Update the group document with the picture path
+    await db.collection('groups').doc(groupId).update({
+      picture: picturePath
+    });
 
-      res.status(201).send({ id: groupId });
+    res.status(201).send({ id: groupId });
   } catch (error) {
-      res.status(400).send(error.message);
+    res.status(400).send(error.message);
   }
 });
 
@@ -1222,10 +1241,7 @@ router.post('/groups/:userId/data', async (req, res) => {
 
 
 
-const setGroupId = (req, res, next) => {
-  req.groupId = req.params.groupId;
-  next();
-};
+
 
 
 router.post('/groups/:groupId/picture',setGroupId, uploadGroupProfil.single('picture'), async (req, res) => {

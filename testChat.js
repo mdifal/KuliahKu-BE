@@ -1,39 +1,46 @@
 const io = require('socket.io-client');
 
-// Ganti URL dengan URL server kamu
-const socket = io('http://localhost:8001');
+const socket1 = io('http://localhost:8001');
+const socket2 = io('http://localhost:8001');
+const socket3 = io('http://localhost:8001');
 
-// Listen for messages
-socket.on('message', (data) => {
-    console.log('Message from server:', data);
+socket1.on('connect', () => {
+  console.log('User 1 connected');
+  socket1.emit('signin', 'rawr@email.com');
+  
+  socket1.on('message', (data) => {
+    console.log('User 1 received:', data);
+  });
 });
 
-// Send a message once connected
-socket.on('connect', () => {
-    console.log('Connected to server');
+socket2.on('connect', () => {
+  console.log('User 2 connected');
+  socket2.emit('signin', 'nisrinawafaz@gmail.com');
+  
+  socket2.on('message', (data) => {
+    console.log('User 2 received:', data);
+  });
 
-    // Signin untuk mengidentifikasi pengguna
-    socket.emit('signin', 'rawr@email.com');
+  // Mengirim pesan pribadi dari User 2 ke User 1
+  socket2.emit('chat', {
+    senderId: 'nisrinawafaz@gmail.com',
+    targetId: 'rawr@email.com',
+    content: 'Hello User 1!'
+  });
+});
 
-    // Join a group to listen for group messages
-    socket.emit('joinGroup', 'IAT5TxunOVE7uSZrdalA'); // Ganti dengan ID grup yang sebenarnya
-
-    // Mengirim pesan pribadi
-    socket.emit('chat', {
-        senderId: 'rawr@email.com',
-        targetId: 'nisrinawafaz@gmail.com',
-        content: 'Hello, this is a test message dari difa hai!'
+socket3.on('connect', () => {
+    console.log('User 3 connected');
+    socket3.emit('signin', 'contoh@email.com');
+    
+    socket3.on('message', (data) => {
+      console.log('User 3 received:', data);
     });
-
-    // Mengirim pesan grup
-    socket.emit('chat', {
-        senderId: 'rawr@email.com',
-        groupId: 'IAT5TxunOVE7uSZrdalA', // Ganti dengan ID grup yang sebenarnya
-        content: 'Hello, this is a test message to the group dari difa hohoh!'
+  
+    // Mengirim pesan pribadi dari User 2 ke User 1
+    socket3.emit('chat', {
+      senderId: 'contoh@email.com',
+      groupId: 'uCJPfn21rzZMUqUGZZ3z',
+      content: 'Hello User Group!'
     });
-});
-
-// Handle disconnection
-socket.on('disconnect', () => {
-    console.log('Disconnected from server');
-});
+  });

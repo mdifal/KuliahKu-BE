@@ -33,7 +33,8 @@ var io = require("socket.io")(server);
 
 //middlewre
 app.use(express.json());
-var clients = {};
+
+const clients = {};
 
 io.on("connection", (socket) => {
   console.log("connected");
@@ -56,12 +57,24 @@ io.on("connection", (socket) => {
         content,
         timestamp: new Date()
       });
-      io.to(groupId).emit("message", {
-        senderId,
-        content,
-        timestamp: new Date(),
-        groupId
-      });
+      
+      // Emit pesan ke semua anggota grup
+      const groupDoc = await db.collection('groups').doc(groupId).get();
+      if (groupDoc.exists) {
+        const groupData = groupDoc.data();
+        const participants = groupData.participants;
+
+        participants.forEach(participantId => {
+          if (clients[participantId]) {
+            clients[participantId].emit("message", {
+              senderId,
+              content,
+              timestamp: new Date(),
+              groupId
+            });
+          }
+        });
+      }
     } else {
       // Chat pribadi
       const privateChatRef = await db.collection('privateChats').add({
@@ -72,6 +85,14 @@ io.on("connection", (socket) => {
       });
       if (clients[targetId]) {
         clients[targetId].emit("message", {
+          senderId,
+          content,
+          timestamp: new Date()
+        });
+      }
+      // Juga kirimkan pesan ke pengirim
+      if (clients[senderId]) {
+        clients[senderId].emit("message", {
           senderId,
           content,
           timestamp: new Date()
@@ -94,8 +115,8 @@ io.on("connection", (socket) => {
     }
     console.log(socket.id, "has left");
   });
-});+
-// Gunakan rute yang diimpor
+});
+
 app.use('/', allRoute);
 
 

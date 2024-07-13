@@ -1422,55 +1422,73 @@ router.get('/users/search', async (req, res) => {
   }
 });
 
-
-
 const getUserChats = async (userId) => {
   try {
     // Mengambil roomChat dari users -> collection roomChats
     const roomChatRef = db.collection('users').doc(userId).collection('roomChats');
     const roomChatSnapshot = await roomChatRef.get();
-    const privateChats = [];
+    const roomChats = [];
 
-    roomChatSnapshot.forEach(doc => {
-      privateChats.push({
-        roomId: doc.id,
-        targetId: doc.data().targetId
-      });
-    });
+    for (const doc of roomChatSnapshot.docs) {
+      const roomId = doc.id;
+      const targetId = doc.data().targetId;
+      const messageSnapshot = await db.collection('privateChats').doc(roomId).collection('messages').orderBy('timestamp', 'desc').limit(1).get();
+      
+      if (!messageSnapshot.empty) {
+        const latestMessage = messageSnapshot.docs[0].data();
+        const targetUser = await db.collection('users').doc(targetId).get();
+        const timestamp = latestMessage.timestamp instanceof fs.firestore.Timestamp
+          ? latestMessage.timestamp.toDate()
+          : new Date(latestMessage.timestamp);
 
-    // Mengambil groupChat dari users -> listGroup dan cek apakah grup tersebut memiliki chat
-    const listGroupRef = db.collection('users').doc(userId).collection('listGroup');
-    const listGroupSnapshot = await listGroupRef.get();
-    const groupChats = [];
-
-    for (const groupDoc of listGroupSnapshot.docs) {
-      const groupId = groupDoc.id;
-      const chatsRef = db.collection('groups').doc(groupId).collection('chats');
-      const chatSnapshot = await chatsRef.limit(1).get();
-
-      if (!chatSnapshot.empty) {
-        groupChats.push({
-          groupId: groupId,
-          groupName: (await db.collection('groups').doc(groupId).get()).data().groupName
+        roomChats.push({
+          roomId,
+          targetId,
+          roomName: targetUser.exists ? targetUser.data().name : 'Unknown',
+          isGroup: false,
+          currentMessage: latestMessage.content,
+          CMTime: timestamp
         });
       }
     }
 
-    return {
-      privateChats,
-      groupChats
-    };
+    // Mengambil groupChat dari users -> listGroup dan cek apakah grup tersebut memiliki chat
+    const listGroupRef = db.collection('users').doc(userId).collection('listGroup');
+    const listGroupSnapshot = await listGroupRef.get();
+
+    for (const groupDoc of listGroupSnapshot.docs) {
+      const groupId = groupDoc.id;
+      const groupData = await db.collection('groups').doc(groupId).get();
+      const messageSnapshot = await db.collection('groups').doc(groupId).collection('chats').orderBy('timestamp', 'desc').limit(1).get();
+
+      if (!messageSnapshot.empty) {
+        const latestMessage = messageSnapshot.docs[0].data();
+        const timestamp = latestMessage.timestamp instanceof fs.firestore.Timestamp
+          ? latestMessage.timestamp.toDate()
+          : new Date(latestMessage.timestamp);
+
+        roomChats.push({
+          roomId: groupId,
+          roomName: groupData.exists ? groupData.data().groupName : 'Unknown',
+          isGroup: true,
+          currentMessage: latestMessage.content,
+          CMTime: timestamp
+        });
+      }
+    }
+
+    return roomChats;
   } catch (error) {
     throw new Error(`Failed to get user chats: ${error.message}`);
   }
 };
 
-// Route untuk mendapatkan roomChats dan groupChats pengguna
+// Route untuk mendapatkan roomChats pengguna
 router.get('/users/:userId/roomchat', async (req, res) => {
   try {
     const userId = req.params.userId;
-    const chats = await getUserChats(userId);
-    res.status(200).send(chats);
+    const roomChats = await getUserChats(userId);
+    res.status(200).send(roomChats);
   } catch (error) {
     res.status(400).send(error.message);
   }

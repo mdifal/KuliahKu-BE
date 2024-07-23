@@ -21,6 +21,7 @@ const db = fs.firestore();
 const secretKey = 'secret'; // Ganti dengan kunci rahasia yang lebih kuat dalam produksi
 
 const allRoute = require('./routes/allRoute');
+const collabPlan = require('./routes/collabPlan');
 
 // Middleware
 app.use(express.json());
@@ -126,6 +127,7 @@ io.on("connection", (socket) => {
 });
 
 app.use('/', allRoute);
+app.use('/', collabPlan);
 
 const port = process.env.PORT || 8080;
 const host = '127.0.0.1';

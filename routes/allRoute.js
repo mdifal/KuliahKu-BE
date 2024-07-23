@@ -10,7 +10,7 @@ const express = require('express');
 const router = express.Router();
 const fsExtra = require('fs-extra');
 const db = fs.firestore();
-
+const { formatDate } = require('../utils/dateUtils');
 router.use(express.urlencoded({ extended: true }));
 router.use(express.json());
 
@@ -53,13 +53,7 @@ function formatDateTimeRaw(year, month, day, hours, minutes, second, millisecond
     return `${year}-${formattedMonth}-${formattedDay} ${hours}:${minutes}:${second}.${milliseconds}`;
   }
 
-  function formatDate(timestamp) {
-    const date = new Date(timestamp);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are zero-based
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
+
 
 async function getDaysInRange(startDate, endDate, day) {
     const days = [];
@@ -639,19 +633,19 @@ router.get('/users/:userId/time-records/semester/:semesterId?', async (req, res)
   }
   
   // Fungsi untuk mendapatkan nama-nama jadwal berdasarkan userId dan semesterId
-  async function getScheduleNames(userId, semesterId) {
-    const schedulesSnapshot = await db.collection('users').doc(userId).collection('schedules')
-      .where('semesterId', '==', semesterId)
-      .get();
-  
-    const courseNames = [];
-    schedulesSnapshot.forEach(doc => {
-      const scheduleData = doc.data();
-      courseNames.push(scheduleData.subject);
-    });
-  
-    return courseNames;
-  }
+async function getScheduleNames(userId, semesterId) {
+  const schedulesSnapshot = await db.collection('users').doc(userId).collection('schedules')
+    .where('semesterId', '==', semesterId)
+    .get();
+
+  const courses = [];
+  schedulesSnapshot.forEach(doc => {
+    const scheduleData = doc.data();
+    courses.push({ subjectId: doc.id , subject: scheduleData.subject});
+  });
+
+  return courses;
+}
   
   // Route untuk mendapatkan jadwal kuliah berdasarkan semesterId atau current semester
   router.get('/users/:userId/jadwalKuliah/semester/:semesterId?', async (req, res) => {
@@ -698,7 +692,7 @@ router.get('/users/:userId/time-records/semester/:semesterId?', async (req, res)
   });
   
   // Route untuk mendapatkan nama-nama jadwal kuliah saat ini
-  router.get('/users/:userId/jadwalKuliahNames/now', async (req, res) => {
+  router.get('/users/:userId/jadwalKuliahList/now', async (req, res) => {
     try {
       const { userId } = req.params;
   
@@ -1171,6 +1165,7 @@ router.post('/groups/:userId', generateGroup, setGroupId, uploadGroupProfil.sing
     const userId = req.params.userId;
     const participantsWithCreator = Array.isArray(participants) ? [...participants, userId] : [userId];
     const groupId = req.groupId;
+    console.log("masuk nih");
 
     // Tambahkan data grup ke Firestore
     await db.collection('groups').doc(groupId).set({
@@ -1189,6 +1184,13 @@ router.post('/groups/:userId', generateGroup, setGroupId, uploadGroupProfil.sing
     });
     await batch.commit();
 
+    // Buat koleksi chats dengan data awal di dalam grup yang baru dibuat
+    const chatDocRef = await db.collection('groups').doc(groupId).collection('chats').add({
+      content: ".",
+      senderId: ".",
+      timestamp: "2024-06-21 13:36:55.210920"
+    });
+    
     next();
   } catch (error) {
     res.status(400).send(error.message);
@@ -1198,7 +1200,7 @@ router.post('/groups/:userId', generateGroup, setGroupId, uploadGroupProfil.sing
     const groupId = req.groupId;
     const picturePath = req.file ? path.join('..', 'uploads', 'group', groupId, 'profilPic', req.file.filename) : '';
 
-    // Update the group document with the picture path
+    // Update dokumen grup dengan path gambar
     await db.collection('groups').doc(groupId).update({
       picture: picturePath
     });
@@ -1208,6 +1210,7 @@ router.post('/groups/:userId', generateGroup, setGroupId, uploadGroupProfil.sing
     res.status(400).send(error.message);
   }
 });
+
 
 router.post('/groups/:userId/data', async (req, res) => {
   try {
@@ -1400,27 +1403,31 @@ router.get('/users/:userId/groups', async (req, res) => {
 
 router.get('/users/search', async (req, res) => {
   try {
-      const email = req.query.email;
-      if (!email) {
-          return res.status(400).send('Email query parameter is required');
-      }
+    const email = req.query.email;
+    if (!email) {
+      return res.status(400).send('Email query parameter is required');
+    }
 
-      const userSnapshot = await db.collection('users')
-        .orderBy('email')
-        .startAt(email)
-        .endAt(email + '\uf8ff')
-        .get();
+    const userSnapshot = await db.collection('users').get();
 
-      if (userSnapshot.empty) {
-          return res.status(404).send('User not found');
-      }
+    if (userSnapshot.empty) {
+      return res.status(404).send('User not found');
+    }
 
-      const userData = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      res.send(userData);
+    const filteredUsers = userSnapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(user => user.email.includes(email));
+
+    if (filteredUsers.length === 0) {
+      return res.status(404).send('User not found');
+    }
+
+    res.send(filteredUsers);
   } catch (error) {
-      res.status(400).send(error.message);
+    res.status(400).send(error.message);
   }
 });
+
 
 const getUserChats = async (userId) => {
   try {
@@ -1433,10 +1440,20 @@ const getUserChats = async (userId) => {
       const roomId = doc.id;
       const targetId = doc.data().targetId;
       const messageSnapshot = await db.collection('privateChats').doc(roomId).collection('messages').orderBy('timestamp', 'desc').limit(1).get();
-      
+      let fullname = '';
+
       if (!messageSnapshot.empty) {
         const latestMessage = messageSnapshot.docs[0].data();
-        const targetUser = await db.collection('users').doc(targetId).get();
+
+        try {
+          const targetUser = await db.collection('users').doc(targetId).get();
+          if (targetUser.exists) {
+            fullname = targetUser.data().fullname;
+          }
+        } catch (error) {
+          console.error('Error getting user fullname:', error);
+        }
+
         const timestamp = latestMessage.timestamp instanceof fs.firestore.Timestamp
           ? latestMessage.timestamp.toDate()
           : new Date(latestMessage.timestamp);
@@ -1444,7 +1461,7 @@ const getUserChats = async (userId) => {
         roomChats.push({
           roomId,
           targetId,
-          roomName: targetUser.exists ? targetUser.data().name : 'Unknown',
+          roomName: fullname,
           isGroup: false,
           currentMessage: latestMessage.content,
           CMTime: timestamp
@@ -1477,11 +1494,15 @@ const getUserChats = async (userId) => {
       }
     }
 
+    // Mengurutkan roomChats berdasarkan CMTime dari yang terbaru ke yang terlama
+    roomChats.sort((a, b) => b.CMTime - a.CMTime);
+
     return roomChats;
   } catch (error) {
     throw new Error(`Failed to get user chats: ${error.message}`);
   }
 };
+
 
 // Route untuk mendapatkan roomChats pengguna
 router.get('/users/:userId/roomchat', async (req, res) => {
@@ -1529,6 +1550,46 @@ router.get('/privateChats/:roomId/chats', async (req, res) => {
     });
 
     res.status(200).send(chats);
+  } catch (error) {
+    res.status(400).send(error.message);
+  }
+});
+
+const getGroupMembers = async (groupId) => {
+  try {
+    const groupDoc = await db.collection('groups').doc(groupId).get();
+    
+    if (!groupDoc.exists) {
+      throw new Error('Group not found');
+    }
+
+    const groupData = groupDoc.data();
+    const members = [];
+
+    for (const memberId of groupData.participants) {
+      const memberDoc = await db.collection('users').doc(memberId).get();
+      
+      if (memberDoc.exists) {
+        members.push({
+          fullname: memberDoc.data().fullname,
+          email: memberDoc.data().email,
+          username: memberDoc.data().username // Mendapatkan username dari dokumen user
+        });
+      }
+    }
+
+    return members;
+  } catch (error) {
+    throw new Error(`Failed to get group members: ${error.message}`);
+  }
+};
+
+// Route untuk mendapatkan data anggota dari sebuah grup
+router.get('/groups/:groupId/member', async (req, res) => {
+  try {
+    const groupId = req.params.groupId;
+    const members = await getGroupMembers(groupId);
+    res.status(200).send(members);
   } catch (error) {
     res.status(400).send(error.message);
   }
